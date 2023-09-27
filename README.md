@@ -29,3 +29,6 @@ To select a specific document: \
 `fsql 'at Users/VQyxGrdksLUta1rM68SIgvv9HHY2`
 
 pip freeze --local > requirements.txt \
+
+### Powerfull when used with `jq`
+https://jqlang.github.io/jq/
