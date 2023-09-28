@@ -119,8 +119,9 @@ def subject_type(intention: str) -> SubjectType:
     else:
         return SubjectType.DOCUMENT
 
+
 def query_type(instruction: str) -> FSQLQueryType:
-    if instruction ==  "show":
+    if instruction == "show":
         return FSQLQueryType.SHOW
     elif instruction == "update":
         return FSQLQueryType.UPDATE
@@ -128,6 +129,7 @@ def query_type(instruction: str) -> FSQLQueryType:
         return FSQLQueryType.DELETE
     else:
         raise ValueError("Invalid query type")
+
 
 def build_query(tokens: list[str]) -> str:
     return " ".join(tokens)
