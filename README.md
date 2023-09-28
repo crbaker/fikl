@@ -1,34 +1,45 @@
 ### Make sure to use virtualenv
 
+### To get locally used modules
+`pip freeze --local > requirements.txt \`
 ### To install requirements
-pip install -r requirements.txt \
+`pip install -r requirements.txt \`
 
 ### To build an executable
-pyinstaller -F -n fsql ./lang/__main__.py
+`pyinstaller -F -n fsql ./lang/__main__.py`
 
-and then you can run the fsql comand 
+and then you can run the fsql comand from the shell
 
 `./dist/fsql "[QUERY]"`
 
 Make sure that the `GOOGLE_APPLICATION_CREDENTIALS` environment variable is set and pointing to a Google Cloud credentials json file
 
-#### Examples
+## Examples
 
-To select from a Collection Group: \
-`fsql 'get * from Scripts` \
-To select from a Collection Group with a `where`: \
-`fsql 'get * from Scripts where uid == "asdasdasdas"'`
+### Collection Group Query
+>A collection group query fetches documents from a collection group and uses the `within` keyword to indicate that a Collection Group is being queried.
 
-To select from a Collection: \
-`fsql 'get * at Users'`
+#### General Form:
+`show [FIELDS | *] within [COLLECTION_GROUP] [where [FIELD] [OPERATOR] [LITERAL]]`
 
-To select from a Collection with a `where`: \
-`fsql 'get * at Users where email == "chris@emguidance.com"'`
+`show * within Scripts where scriptId == "ABCNFRGH"`
 
-To select a specific document: \
-`fsql 'get firstName,lastName at Users/VQyxGrdksLUta1rM68SIgvv9HHY2`
+### Collection Query
+>A collection query fetches documents from a collection and uses the `from` keyword to indicate that a Collection is being queried.
 
-pip freeze --local > requirements.txt \
+#### General Form:
+`show [FIELDS | *] from [COLLECTION_PATH] [where [FIELD] [OPERATOR] [LITERAL]]`
 
-### Powerfull when used with `jq`
+`show * from Users where uid == "1234566"`
+
+### Document Fetch
+>A collection query fetches a documents and uses the `at` keyword to indicate that a Document is being requested.\
+ _Note: Even though a single document is being requested, the result is still a list, either empty if the document does not exist or a list of length 1._
+
+#### General Form:
+`show [FIELDS | *] at [DOCUMENT_PATH]`
+
+`show * at Users/VQyxGrdksLUta1rM68SIgvv9HHY2`
+
+## Powerfull when used with `jq`
 https://jqlang.github.io/jq/
