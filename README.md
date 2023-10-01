@@ -6,7 +6,7 @@
 `pip install -r requirements.txt \`
 
 ### To build an executable
-`pyinstaller -F -n fsql ./lang/__main__.py`
+`pyinstaller -F -n fsql --add-data "fsql.lark:." ./lang/__main__.py`
 
 and then you can run the fsql comand from the shell
 

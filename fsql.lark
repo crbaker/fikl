@@ -1,0 +1,52 @@
+start: instruction
+
+instruction: "show" select collection_type subject [where] -> show_collection
+    | "show" select document_type subject -> show_document
+    | "update" collection_type subject "set" property "=" literal where // must have a where clause when updating documents in a collection
+    | "update" document_type subject "set" property "=" literal // no need for a where clause when updating a document
+    | "delete" collection_type subject where // must have a where clause when deleting from a collection
+    | "delete" document_type subject // no need for a where clause when deleting a document
+
+where: "where" property operator matching
+
+matching: (literal | array)
+
+select: (all | fields)
+all: ALL
+fields: property ("," property)*
+
+property: ESCAPED_STRING | CNAME
+subject: ESCAPED_STRING | CNAME
+literal: ESCAPED_STRING | NUMBER | SIGNED_NUMBER
+
+array: "[" literal ("," literal)* "]"
+
+ALL: "*"
+
+WITHIN: "within"
+FROM: "from"
+AT: "at"
+
+collection_type: WITHIN|FROM
+document_type: AT
+subject_type: collection_type | document_type
+
+GREATER: ">"
+GREATER_EQUAL: ">="
+LESSER: "<"
+LESSER_EQUAL: "<="
+NOT: "!="
+EQUAL: "=="
+IN: "in"
+NOT_IN: "not-in"
+ARRAY_CONTAINS: "array_contains"
+ARRAY_CONTAINS_ANY: "array_contains_any"
+
+operator: LESSER | LESSER_EQUAL | EQUAL | NOT | GREATER_EQUAL | GREATER | IN | NOT_IN | ARRAY_CONTAINS | ARRAY_CONTAINS_ANY
+
+%import common.CNAME
+%import common.ESCAPED_STRING
+%import common.NUMBER
+%import common.SIGNED_NUMBER
+%import common.WS
+%ignore WS
