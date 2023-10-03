@@ -5,13 +5,12 @@ import os
 import sys
 from lark import Lark
 
-from rich import print as rprint
+# from rich import print as rprint
 
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from lang.transformer import FSQLQuery, FSQLQueryType, FSQLShowQuery, FSQLSubjectType, FSQLTree, FSQLUpdateQuery
-
 
 class QueryError(ValueError):
     pass
