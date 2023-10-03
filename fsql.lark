@@ -2,10 +2,12 @@ start: instruction
 
 instruction: "show" select collection_type subject [where] -> show_collection
     | "show" select document_type subject -> show_document
-    | "update" collection_type subject "set" property "=" literal where // must have a where clause when updating documents in a collection
-    | "update" document_type subject "set" property "=" literal // no need for a where clause when updating a document
-    | "delete" collection_type subject where // must have a where clause when deleting from a collection
-    | "delete" document_type subject // no need for a where clause when deleting a document
+
+    | "update" collection_type subject "set" set where  -> update_collection
+    | "update" document_type subject "set" set -> update_document
+
+    | "delete" collection_type subject where -> delete_collection
+    | "delete" document_type subject -> delete_document
 
 where: "where" property operator matching
 
@@ -15,9 +17,12 @@ select: (all | fields)
 all: ALL
 fields: property ("," property)*
 
+set: setter ("," setter)*
+setter: property "=" literal
+
 property: ESCAPED_STRING | CNAME
 subject: ESCAPED_STRING | CNAME
-literal: ESCAPED_STRING | NUMBER | SIGNED_NUMBER
+literal: ESCAPED_STRING | NUMBER | SIGNED_NUMBER | NULL
 
 array: "[" literal ("," literal)* "]"
 
@@ -26,6 +31,8 @@ ALL: "*"
 WITHIN: "within"
 FROM: "from"
 AT: "at"
+
+NULL: "null"
 
 collection_type: WITHIN|FROM
 document_type: AT
