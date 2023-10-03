@@ -9,7 +9,8 @@ instruction: "show" select collection_type subject [where] -> show_collection
     | "delete" collection_type subject where -> delete_collection
     | "delete" document_type subject -> delete_document
 
-where: "where" property operator matching
+where: "where" comparrison ("and" comparrison)*
+comparrison: property operator matching
 
 matching: (literal | array)
 

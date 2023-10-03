@@ -24,8 +24,8 @@ def run_query(query: str) -> list[dict] | dict:
     parser = Lark(grammar, lexer="basic")
     parse_tree = parser.parse(query)
 
-    ll = FSQLTree().transform(parse_tree)
-    fsql_query: FSQLQuery = ll.children[0]
+    ql_tree = FSQLTree().transform(parse_tree)
+    fsql_query: FSQLQuery = ql_tree.children[0]
 
     response = execute_query(fsql_query)
 
@@ -83,11 +83,13 @@ def snapshot_to_document_fn(fsql_query: FSQLQuery):
     return extract_fields_from_snapshot
 
 
-def add_where(query: firestore.Query, fsql_query: FSQLQuery):
+def add_where_clauses(query: firestore.Query, fsql_query: FSQLQuery):
     if fsql_query["where"] is not None:
-        field_filter = FieldFilter(
-            fsql_query["where"]["field"], fsql_query["where"]["operator"], fsql_query["where"]["value"])
-        return query.where(filter=field_filter)
+        for where in fsql_query["where"]:
+            field_filter = FieldFilter(
+                where["field"], where["operator"], where["value"])
+            query = query.where(filter=field_filter)
+        return query
     else:
         return query
 
@@ -95,8 +97,10 @@ def add_where(query: firestore.Query, fsql_query: FSQLQuery):
 def update_document_ref(ref: firestore.DocumentReference, new_values: dict):
     ref.update(new_values)
 
+
 def delete_document_ref(ref: firestore.DocumentReference):
     ref.delete()
+
 
 def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | int:
 
@@ -114,6 +118,7 @@ def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | i
     query_fn = fn_for_query(fsql_query)
 
     return query_fn(fsql_query)
+
 
 def execute_delete_query(fsql_query: FSQLUpdateQuery) -> int:
     docs = execute_show_query(fsql_query)
@@ -151,11 +156,11 @@ def execute_show_query(fsql_query: FSQLShowQuery) -> list[firestore.DocumentSnap
 
     match fsql_query["subject_type"]:
         case FSQLSubjectType.COLLECTION_GROUP:
-            query = add_where(db.collection_group(
+            query = add_where_clauses(db.collection_group(
                 fsql_query["subject"]), fsql_query)
             return query.get()
         case FSQLSubjectType.COLLECTION:
-            query = add_where(db.collection(fsql_query["subject"]), fsql_query)
+            query = add_where_clauses(db.collection(fsql_query["subject"]), fsql_query)
             return query.get()
         case FSQLSubjectType.DOCUMENT:
             return [db.document(fsql_query["subject"]).get()]

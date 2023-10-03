@@ -30,7 +30,7 @@ class FSQLQuery(TypedDict):
     query_type: FSQLQueryType
     subject: str
     subject_type: FSQLSubjectType
-    where: FSQLWhere | None
+    where: list[FSQLWhere] | None
 
 
 class FSQLUpdateSet(TypedDict):
@@ -65,19 +65,19 @@ class FSQLTree(Transformer):
                 x.children[0].value), list(matching.find_data("literal"))))
             return values
 
-    def as_where(self, where: Tree | None) -> FSQLWhere | None:
+    def as_where(self, where: Tree | None) -> list[FSQLWhere] | None:
         if (where is None):
             return None
         else:
-            field = self.data_value(where, 'property')
-            operator = self.data_value(where, 'operator')
-            matching = self.as_fsql_match(where)
 
-            return {
-                'field': field,
-                'operator': operator,
-                'value': matching
-            }
+            def token_as_where(token) -> FSQLWhere:
+                return {
+                    'field': self.data_value(token, 'property'),
+                    'operator': self.data_value(token, 'operator'),
+                    'value': self.as_fsql_match(token)
+                }
+
+            return list(map(token_as_where, list(where.find_data("comparrison"))))
 
     def as_fields(self, select: Tree) -> list[str]:
         select_type = select.children[0].data.value
