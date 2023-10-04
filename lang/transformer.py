@@ -11,7 +11,8 @@ AllTypes = Union[int, float, str, bool, None]
 class FSQLQueryType(Enum):
     SELECT = 1
     UPDATE = 2
-    DELETE = 3
+    DELETE = 3,
+    SHOW = 4
 
 
 class FSQLSubjectType(Enum):
@@ -28,7 +29,7 @@ class FSQLWhere(TypedDict):
 
 class FSQLQuery(TypedDict):
     query_type: FSQLQueryType
-    subject: str
+    subject: str | None
     subject_type: FSQLSubjectType
     where: list[FSQLWhere] | None
 
@@ -169,3 +170,11 @@ class FSQLTree(Transformer):
 
     def delete_document(self, subject_type: Tree, subject: Tree):
         return self.delete(subject_type, subject, where=None)
+
+    def show_collections(self):
+        return {
+            "query_type": FSQLQueryType.SHOW,
+            "subject": None,
+            "subject_type": FSQLSubjectType.COLLECTION,
+            "where": None
+        }

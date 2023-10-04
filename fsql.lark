@@ -9,6 +9,8 @@ instruction: "select" subset collection_type subject [where] [limit] -> select_c
     | "delete" collection_type subject where -> delete_collection
     | "delete" document_type subject -> delete_document
 
+    | "show" "collections" -> show_collections
+
 where: "where" comparrison ("and" comparrison)*
 comparrison: property operator matching
 

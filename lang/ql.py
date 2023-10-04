@@ -94,14 +94,17 @@ def object_exists(dict) -> bool:
 def snapshot_to_document_fn(fsql_query: FSQLQuery):
     requested_fields = fsql_query["fields"] if "fields" in fsql_query else "*"
 
-    def extract_fields_from_snapshot(snapshot: firestore.DocumentSnapshot):
-        document_dict = snapshot.to_dict()
-        document_dict["_path"] = snapshot.reference.path
-
-        if (requested_fields == "*"):
-            return document_dict
+    def extract_fields_from_snapshot(response: firestore.DocumentSnapshot | str):
+        if isinstance(response, str):
+            return response
         else:
-            return extract_fields(document_dict, requested_fields)
+            document_dict = response.to_dict()
+            document_dict["_path"] = response.reference.path
+
+            if (requested_fields == "*"):
+                return document_dict
+            else:
+                return extract_fields(document_dict, requested_fields)
 
     return extract_fields_from_snapshot
 
@@ -130,11 +133,13 @@ def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | i
     def fn_for_query(fsql_query: FSQLQuery):
         match fsql_query["query_type"]:
             case FSQLQueryType.SELECT:
-                return execute_show_query
+                return execute_select_query
             case FSQLQueryType.UPDATE:
                 return execute_update_query
             case FSQLQueryType.DELETE:
                 return execute_delete_query
+            case FSQLQueryType.SHOW:
+                return execute_show_query
             case _:
                 return lambda x: []
 
@@ -144,7 +149,7 @@ def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | i
 
 
 def execute_delete_query(fsql_query: FSQLUpdateQuery) -> int:
-    docs = execute_show_query(fsql_query)
+    docs = execute_select_query(fsql_query)
 
     count = 0
 
@@ -159,7 +164,7 @@ def execute_delete_query(fsql_query: FSQLUpdateQuery) -> int:
 
 
 def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
-    docs = execute_show_query(fsql_query)
+    docs = execute_select_query(fsql_query)
 
     count = 0
 
@@ -179,7 +184,16 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
     return count
 
 
-def execute_show_query(fsql_query: FSQLSelectQuery) -> list[firestore.DocumentSnapshot]:
+def execute_show_query(_: FSQLSelectQuery) -> list[str]:
+    db = firestore.Client()
+
+    collections = []
+    for coll in db.collections():
+        collections.append(coll.id)
+
+    return collections
+
+def execute_select_query(fsql_query: FSQLSelectQuery) -> list[firestore.DocumentSnapshot]:
     db = firestore.Client()
 
     def execute_collection_query(query: firestore.Query) -> list[firestore.DocumentSnapshot]:
