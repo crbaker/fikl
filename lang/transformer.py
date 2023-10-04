@@ -44,6 +44,7 @@ class FSQLUpdateQuery(FSQLQuery):
 
 class FSQLShowQuery(FSQLQuery):
     fields: list[str] | str
+    limit: int | None
 
 
 @v_args(inline=True)    # Affects the signatures of the methods
@@ -53,7 +54,7 @@ class FSQLTree(Transformer):
 
     def data_value(self, some_tree: Tree, data: str):
         data_tree: list[Tree] = list(some_tree.find_data(data))
-        return self.as_value(data_tree[0])
+        return data_tree[0].children[0].value
 
     def as_value(self, some_tree: Tree) -> AllTypes:
         match some_tree.children[0].type:
@@ -61,6 +62,8 @@ class FSQLTree(Transformer):
                 return some_tree.children[0].value
             case "NULL":
                 return None
+            case "EQUAL":
+                return some_tree.children[0].value
             case _:
                 return ast.literal_eval(some_tree.children[0].value)
 
@@ -74,11 +77,16 @@ class FSQLTree(Transformer):
                 x.children[0].value), list(matching.find_data("literal"))))
             return values
 
+    def as_limit(self, limit: Tree | None) -> list[FSQLWhere] | None:
+        if (limit is None):
+            return None
+        else:
+            return self.as_value(limit)
+
     def as_where(self, where: Tree | None) -> list[FSQLWhere] | None:
         if (where is None):
             return None
         else:
-
             def token_as_where(token) -> FSQLWhere:
                 return {
                     'field': self.data_value(token, 'property'),
@@ -87,12 +95,15 @@ class FSQLTree(Transformer):
                 }
 
             return list(map(token_as_where, list(where.find_data("comparrison"))))
-        
+
     def as_setters(self, set: Tree) -> FSQLUpdateSet:
-        return list(map(lambda x: {
-            "property": self.data_value(x, "property"),
-            "value": self.as_value(x.children[1])
-        }, list(set.find_data("setter"))))
+        def as_setter(x: Tree):
+            matching = list(x.find_data("property"))[0]
+            return {
+                "property": self.as_value(matching),
+                "value": self.as_value(x.children[1])
+            }
+        return list(map(as_setter, list(set.find_data("setter"))))
 
     def as_fields(self, select: Tree) -> list[str]:
         select_type = select.children[0].data.value
@@ -112,21 +123,21 @@ class FSQLTree(Transformer):
             case "AT":
                 return FSQLSubjectType.DOCUMENT
 
-    def show(self, select: Tree, subject_type: Tree, subject: Tree, where: Tree | None) -> FSQLShowQuery:
-
+    def show(self, select: Tree, subject_type: Tree, subject: Tree, where: Tree | None, limit: Tree | None) -> FSQLShowQuery:
         return {
             "query_type": FSQLQueryType.SHOW,
             "fields": self.as_fields(select),
             "subject": self.as_value(subject),
             "subject_type": self.as_fsql_subject_type(subject_type),
-            "where": self.as_where(where)
+            "where": self.as_where(where),
+            "limit": self.as_limit(limit)
         }
 
-    def show_collection(self, select: Tree, subject_type: Tree, subject: Tree, where: Tree | None):
-        return self.show(select, subject_type, subject, where)
+    def show_collection(self, select: Tree, subject_type: Tree, subject: Tree, where: Tree | None, limit: Tree | None):
+        return self.show(select, subject_type, subject, where, limit)
 
     def show_document(self, select: Tree, subject_type: Tree, subject: Tree):
-        return self.show(select, subject_type, subject, where=None)
+        return self.show(select, subject_type, subject, where=None, limit=None)
 
     def update(self, subject_type: Tree, subject: Tree, set: Tree, where: Tree | None):
         setters = self.as_setters(set)

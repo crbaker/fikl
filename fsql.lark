@@ -1,6 +1,6 @@
 start: instruction
 
-instruction: "show" select collection_type subject [where] -> show_collection
+instruction: "show" select collection_type subject [where] [limit] -> show_collection
     | "show" select document_type subject -> show_document
 
     | "update" collection_type subject "set" set where  -> update_collection
@@ -13,6 +13,8 @@ where: "where" comparrison ("and" comparrison)*
 comparrison: property operator matching
 
 matching: (literal | array)
+
+limit: "limit" SIGNED_NUMBER
 
 select: (all | fields)
 all: ALL

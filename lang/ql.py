@@ -182,15 +182,18 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
 def execute_show_query(fsql_query: FSQLShowQuery) -> list[firestore.DocumentSnapshot]:
     db = firestore.Client()
 
+    def execute_collection_query(query: firestore.Query) -> list[firestore.DocumentSnapshot]:
+        query = add_where_clauses(query, fsql_query)
+        if fsql_query["limit"] is not None:
+            query = query.limit(fsql_query["limit"])
+
+        return query.get()
+
     match fsql_query["subject_type"]:
         case FSQLSubjectType.COLLECTION_GROUP:
-            query = add_where_clauses(db.collection_group(
-                fsql_query["subject"]), fsql_query)
-            return query.get()
+            return execute_collection_query(db.collection_group(fsql_query["subject"]))
         case FSQLSubjectType.COLLECTION:
-            query = add_where_clauses(db.collection(
-                fsql_query["subject"]), fsql_query)
-            return query.get()
+            return execute_collection_query(db.collection(fsql_query["subject"]))
         case FSQLSubjectType.DOCUMENT:
             return [db.document(fsql_query["subject"]).get()]
 
