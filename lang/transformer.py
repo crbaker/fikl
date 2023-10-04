@@ -89,8 +89,9 @@ class FSQLTree(Transformer):
             return None
         else:
             def token_as_where(token) -> FSQLWhere:
+                matching = list(token.find_data("property"))[0]
                 return {
-                    'field': self.data_value(token, 'property'),
+                    'field': self.as_value(matching),
                     'operator': self.data_value(token, 'operator'),
                     'value': self.as_fsql_match(token)
                 }
@@ -98,11 +99,11 @@ class FSQLTree(Transformer):
             return list(map(token_as_where, list(where.find_data("comparrison"))))
 
     def as_setters(self, set: Tree) -> FSQLUpdateSet:
-        def as_setter(x: Tree):
-            matching = list(x.find_data("property"))[0]
+        def as_setter(token: Tree):
+            matching = list(token.find_data("property"))[0]
             return {
                 "property": self.as_value(matching),
-                "value": self.as_value(x.children[1])
+                "value": self.as_value(token.children[1])
             }
         return list(map(as_setter, list(set.find_data("setter"))))
 
