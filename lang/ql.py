@@ -198,7 +198,7 @@ def execute_select_query(fsql_query: FSQLSelectQuery) -> list[firestore.Document
 
     def execute_collection_query(query: firestore.Query) -> list[firestore.DocumentSnapshot]:
         query = add_where_clauses(query, fsql_query)
-        if fsql_query["limit"] is not None:
+        if "limit" in fsql_query and fsql_query["limit"] is not None:
             query = query.limit(fsql_query["limit"])
 
         return query.get()
