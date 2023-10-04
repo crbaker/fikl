@@ -3,14 +3,16 @@
 
 import os
 import sys
+from collections import defaultdict
 from lark import Lark
 
-# from rich import print as rprint
+from rich import print as rprint
 
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from lang.transformer import FSQLQuery, FSQLQueryType, FSQLShowQuery, FSQLSubjectType, FSQLTree, FSQLUpdateQuery
+
 
 class QueryError(ValueError):
     pass
@@ -34,11 +36,33 @@ def run_query(query: str) -> list[dict] | dict:
         return list(filter(object_exists, map(snapshot_to_document_fn(fsql_query), response)))
 
 
-def merge_dicts(dicts: list[dict]) -> dict:
+def merge_setters(dicts: list[dict]) -> dict:
     result = {}
     for d in dicts:
         result.update({d["property"]: d["value"]})
     return result
+
+
+def expand_key(dictionary: dict, key: str, value) -> dict:
+    if "." in key:
+        key, rest = key.split(".", 1)
+        if key not in dictionary:
+            dictionary[key] = {}
+            expand_key(dictionary[key], rest, value)
+    else:
+        dictionary[key] = value
+    return dictionary
+
+
+def merge_dicts(dicts):
+    result = defaultdict(dict)
+    for d in dicts:
+        for key, value in d.items():
+            if isinstance(value, dict):
+                result[key] = merge_dicts([result[key], value])
+            else:
+                result[key] = value
+    return dict(result)
 
 
 def extract_fields(obj: dict, fields: list[str]):
@@ -140,9 +164,14 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
     count = 0
 
     for doc in docs:
-        new_values = merge_dicts(fsql_query["set"])
+        new_values = merge_setters(fsql_query["set"])
+
+        dicts = list(map(lambda x: expand_key(
+            {}, x, new_values[x]), new_values))
+        merged_dict = merge_dicts(dicts)
+
         try:
-            update_document_ref(doc.reference, new_values)
+            update_document_ref(doc.reference, merged_dict)
             count += 1
         except Exception:
             pass
@@ -159,7 +188,8 @@ def execute_show_query(fsql_query: FSQLShowQuery) -> list[firestore.DocumentSnap
                 fsql_query["subject"]), fsql_query)
             return query.get()
         case FSQLSubjectType.COLLECTION:
-            query = add_where_clauses(db.collection(fsql_query["subject"]), fsql_query)
+            query = add_where_clauses(db.collection(
+                fsql_query["subject"]), fsql_query)
             return query.get()
         case FSQLSubjectType.DOCUMENT:
             return [db.document(fsql_query["subject"]).get()]

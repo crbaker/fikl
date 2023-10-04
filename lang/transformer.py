@@ -53,7 +53,16 @@ class FSQLTree(Transformer):
 
     def data_value(self, some_tree: Tree, data: str):
         data_tree: list[Tree] = list(some_tree.find_data(data))
-        return data_tree[0].children[0].value
+        return self.as_value(data_tree[0])
+
+    def as_value(self, some_tree: Tree) -> AllTypes:
+        match some_tree.children[0].type:
+            case "CNAME":
+                return some_tree.children[0].value
+            case "NULL":
+                return None
+            case _:
+                return ast.literal_eval(some_tree.children[0].value)
 
     def as_fsql_match(self, where: Tree) -> AllTypes | list[AllTypes]:
         matching = list(where.find_data('matching'))[0].children[0]
@@ -78,6 +87,12 @@ class FSQLTree(Transformer):
                 }
 
             return list(map(token_as_where, list(where.find_data("comparrison"))))
+        
+    def as_setters(self, set: Tree) -> FSQLUpdateSet:
+        return list(map(lambda x: {
+            "property": self.data_value(x, "property"),
+            "value": self.as_value(x.children[1])
+        }, list(set.find_data("setter"))))
 
     def as_fields(self, select: Tree) -> list[str]:
         select_type = select.children[0].data.value
@@ -87,15 +102,6 @@ class FSQLTree(Transformer):
             return values
         elif select_type == "all":
             return "*"
-
-    def as_value(self, some_tree: Tree) -> AllTypes:
-        match some_tree.children[0].type:
-            case "CNAME":
-                return some_tree.children[0].value
-            case "NULL":
-                return None
-            case _:
-                return ast.literal_eval(some_tree.children[0].value)
 
     def as_fsql_subject_type(self, subject_type: Tree):
         match subject_type.children[0].type:
@@ -123,10 +129,7 @@ class FSQLTree(Transformer):
         return self.show(select, subject_type, subject, where=None)
 
     def update(self, subject_type: Tree, subject: Tree, set: Tree, where: Tree | None):
-        setters = list(map(lambda x: {
-            "property": self.data_value(x, "property"),
-            "value": self.as_value(x.children[1])
-        }, list(set.find_data("setter"))))
+        setters = self.as_setters(set)
 
         return {
             "query_type": FSQLQueryType.UPDATE,
