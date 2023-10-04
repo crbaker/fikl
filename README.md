@@ -20,26 +20,26 @@ Make sure that the `GOOGLE_APPLICATION_CREDENTIALS` environment variable is set 
 >A collection group query fetches documents from a collection group and uses the `within` keyword to indicate that a Collection Group is being queried.
 
 #### General Form:
-`show [FIELDS | *] within [COLLECTION_GROUP] [where [FIELD] [OPERATOR] [LITERAL]]`
+`select [FIELDS | *] within [COLLECTION_GROUP] [where [FIELD] [OPERATOR] [LITERAL]]`
 
-`show * within Scripts where scriptId == "ABCNFRGH"`
+`select * within Scripts where scriptId == "ABCNFRGH"`
 
 ### Collection Query
 >A collection query fetches documents from a collection and uses the `from` keyword to indicate that a Collection is being queried.
 
 #### General Form:
-`show [FIELDS | *] from [COLLECTION_PATH] [where [FIELD] [OPERATOR] [LITERAL]]`
+`select [FIELDS | *] from [COLLECTION_PATH] [where [FIELD] [OPERATOR] [LITERAL]]`
 
-`show * from Users where uid == "1234566"`
+`select * from Users where uid == "1234566"`
 
 ### Document Fetch
 >A collection query fetches a documents and uses the `at` keyword to indicate that a Document is being requested.\
  _Note: Even though a single document is being requested, the result is still a list, either empty if the document does not exist or a list of length 1._
 
 #### General Form:
-`show [FIELDS | *] at [DOCUMENT_PATH]`
+`select [FIELDS | *] at [DOCUMENT_PATH]`
 
-`show * at Users/VQyxGrdksLUta1rM68SIgvv9HHY2`
+`select * at Users/VQyxGrdksLUta1rM68SIgvv9HHY2`
 
 ## Powerfull when used with `jq`
 https://jqlang.github.io/jq/

@@ -11,7 +11,7 @@ from rich import print as rprint
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
-from lang.transformer import FSQLQuery, FSQLQueryType, FSQLShowQuery, FSQLSubjectType, FSQLTree, FSQLUpdateQuery
+from lang.transformer import FSQLQuery, FSQLQueryType, FSQLSelectQuery, FSQLSubjectType, FSQLTree, FSQLUpdateQuery
 
 
 class QueryError(ValueError):
@@ -129,7 +129,7 @@ def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | i
 
     def fn_for_query(fsql_query: FSQLQuery):
         match fsql_query["query_type"]:
-            case FSQLQueryType.SHOW:
+            case FSQLQueryType.SELECT:
                 return execute_show_query
             case FSQLQueryType.UPDATE:
                 return execute_update_query
@@ -179,7 +179,7 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
     return count
 
 
-def execute_show_query(fsql_query: FSQLShowQuery) -> list[firestore.DocumentSnapshot]:
+def execute_show_query(fsql_query: FSQLSelectQuery) -> list[firestore.DocumentSnapshot]:
     db = firestore.Client()
 
     def execute_collection_query(query: firestore.Query) -> list[firestore.DocumentSnapshot]:

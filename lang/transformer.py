@@ -9,7 +9,7 @@ AllTypes = Union[int, float, str, bool, None]
 
 
 class FSQLQueryType(Enum):
-    SHOW = 1
+    SELECT = 1
     UPDATE = 2
     DELETE = 3
 
@@ -42,7 +42,7 @@ class FSQLUpdateQuery(FSQLQuery):
     set: list[FSQLUpdateSet]
 
 
-class FSQLShowQuery(FSQLQuery):
+class FSQLSelectQuery(FSQLQuery):
     fields: list[str] | str
     limit: int | None
 
@@ -123,21 +123,21 @@ class FSQLTree(Transformer):
             case "AT":
                 return FSQLSubjectType.DOCUMENT
 
-    def show(self, select: Tree, subject_type: Tree, subject: Tree, where: Tree | None, limit: Tree | None) -> FSQLShowQuery:
+    def do_select(self, subset: Tree, subject_type: Tree, subject: Tree, where: Tree | None, limit: Tree | None) -> FSQLSelectQuery:
         return {
-            "query_type": FSQLQueryType.SHOW,
-            "fields": self.as_fields(select),
+            "query_type": FSQLQueryType.SELECT,
+            "fields": self.as_fields(subset),
             "subject": self.as_value(subject),
             "subject_type": self.as_fsql_subject_type(subject_type),
             "where": self.as_where(where),
             "limit": self.as_limit(limit)
         }
 
-    def show_collection(self, select: Tree, subject_type: Tree, subject: Tree, where: Tree | None, limit: Tree | None):
-        return self.show(select, subject_type, subject, where, limit)
+    def select_collection(self, subset: Tree, subject_type: Tree, subject: Tree, where: Tree | None, limit: Tree | None):
+        return self.do_select(subset, subject_type, subject, where, limit)
 
-    def show_document(self, select: Tree, subject_type: Tree, subject: Tree):
-        return self.show(select, subject_type, subject, where=None, limit=None)
+    def select_document(self, subset: Tree, subject_type: Tree, subject: Tree):
+        return self.do_select(subset, subject_type, subject, where=None, limit=None)
 
     def update(self, subject_type: Tree, subject: Tree, set: Tree, where: Tree | None):
         setters = self.as_setters(set)
