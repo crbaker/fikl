@@ -52,10 +52,6 @@ Pygments==2.16.1
 pyinstaller==6.0.0
 pyinstaller-hooks-contrib==2023.9
 pylint==3.0.0
-pyobjc-core==10.0
-pyobjc-framework-ApplicationServices==10.0
-pyobjc-framework-Cocoa==10.0
-pyobjc-framework-Quartz==10.0
 python-dateutil==2.8.2
 pyzmq==25.1.1
 requests==2.31.0
