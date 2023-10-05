@@ -109,7 +109,7 @@ class FSQLTree(Transformer):
         if limit is None:
             return None
         return self.as_value(limit)
-    
+
     def as_output(self, output: Tree | None) -> list[FSQLWhere] | None:
         """Gets the output value that is specified in the query."""
         if output is None:

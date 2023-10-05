@@ -26,6 +26,7 @@ class QueryError(ValueError):
 
 
 def should_output(fsql_query: FSQLQuery) -> bool:
+    "Indicates if the output of the query should be saved to a file"
     return "output" in fsql_query and object_exists(fsql_query["output"])
 
 
@@ -51,8 +52,8 @@ def run_query(query: str) -> list[dict] | dict:
             saved_to_path = output_json_to_file(json.dumps(
                 documents, indent=2), fsql_query["output"])
             return {"count": len(documents), "file": saved_to_path}
-        else:
-            return documents
+
+        return documents
     except QueryError:
         raise
     except Exception as exception:
