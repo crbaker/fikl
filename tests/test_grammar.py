@@ -61,6 +61,39 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(query["where"][1]["operator"], "==")
         self.assertEqual(query["where"][1]["value"], 2000)
 
+    def test_should_parse_valid_select_and_array_based_where_query(self):
+        query = parse("""
+            select * from SOME_COLLECTION
+                      where some_field in ["ABDEFG", "HIJKLNOP"]
+        """)
+
+        self.assertIsNotNone(query["where"])
+        self.assertEqual(len(query["where"]), 1)
+
+        self.assertEqual(query["where"][0]["field"], "some_field")
+        self.assertEqual(query["where"][0]["operator"], "in")
+        self.assertEqual(query["where"][0]["value"], ["ABDEFG", "HIJKLNOP"])
+
+    def test_should_parse_valid_document_update(self):
+        query = parse("""
+            update at "SOME_COLLECTION/DOC_ID"
+                      set some_field = "ABC", some_other_field = 2000, some_nullable_field = null
+        """)
+        self.assertEqual(query["query_type"], FSQLQueryType.UPDATE)
+        self.assertEqual(query["subject_type"], FSQLSubjectType.DOCUMENT)
+
+        self.assertIsNotNone(query["set"])
+        self.assertEqual(len(query["set"]), 3)
+
+        self.assertEqual(query["set"][0]["property"], "some_field")
+        self.assertEqual(query["set"][0]["value"], "ABC")
+
+        self.assertEqual(query["set"][1]["property"], "some_other_field")
+        self.assertEqual(query["set"][1]["value"], 2000)
+
+        self.assertEqual(query["set"][2]["property"], "some_nullable_field")
+        self.assertEqual(query["set"][2]["value"], None)
+
     def test_should_parse_valid_update_with_limit_and_where_query(self):
         query = parse("""
             update from SOME_COLLECTION
@@ -105,6 +138,38 @@ class TestTransformer(unittest.TestCase):
         self.assertIsNone(query["where"])
         self.assertEqual(query["limit"], 10)
 
+    def test_should_parse_valid_select_on_document(self):
+        query = parse('select * at "SOME_COLLECTION/DOC_ID"')
+        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
+        self.assertEqual(query["fields"], "*")
+        self.assertEqual(query["subject_type"],
+                         FSQLSubjectType.DOCUMENT)
+        self.assertEqual(query["subject"], "SOME_COLLECTION/DOC_ID")
+        self.assertIsNone(query["where"])
+        self.assertIsNone(query["limit"], 10)
+
+    def test_should_parse_valid_show_query(self):
+        query = parse('show collections')
+        self.assertEqual(query["query_type"], FSQLQueryType.SHOW)
+        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+
+    def test_should_parse_valid_delete_query(self):
+        query = parse('delete from COLLECTION where some_field == 2000')
+
+        self.assertEqual(query["query_type"], FSQLQueryType.DELETE)
+        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+
+        self.assertIsNotNone(query["where"])
+        self.assertEqual(len(query["where"]), 1)
+
+    def test_should_parse_valid_delete_document_query(self):
+        query = parse('delete at "COLLECTION/DOC_ID"')
+
+        self.assertEqual(query["query_type"], FSQLQueryType.DELETE)
+        self.assertEqual(query["subject_type"], FSQLSubjectType.DOCUMENT)
+        self.assertEqual(query["subject"], "COLLECTION/DOC_ID")
+
+        self.assertIsNone(query["where"])
 
     def test_should_not_parse_document_select_that_has_where(self):
         with self.assertRaises(QuerySyntaxError):

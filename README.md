@@ -35,7 +35,7 @@ pip install -r requirements.txt
 3. Run lint and tests
 ```sh
 pylint lang
-python -m coverage run -m unittest
+python -m coverage run -m unittest && coverage report && coverage html
 ```
 
 4. Use `pyinstaller` to create an executable. A `dist` directory will be created which will include the executable.

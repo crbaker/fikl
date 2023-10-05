@@ -83,8 +83,6 @@ class FSQLTree(Transformer):
                 return some_tree.children[0].value
             case "NULL":
                 return None
-            case "EQUAL":
-                return some_tree.children[0].value
             case _:
                 return ast.literal_eval(some_tree.children[0].value)
 
