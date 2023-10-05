@@ -1,5 +1,5 @@
 """Tests the Transformer class and language grammar"""
-# pylint: disable=missing-function-docstring,missing-class-docstring, no-method-argument, invalid-name
+# pylint: disable=missing-function-docstring,missing-class-docstring
 import unittest
 
 from lang.transformer import (parse, read_grammar, build_parse_tree,
