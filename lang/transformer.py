@@ -78,12 +78,12 @@ class FSQLTree(Transformer):
         super().__init__()
         self.vars = {}
 
-    def data_value(self, some_tree: Tree, data: str):
+    def _data_value(self, some_tree: Tree, data: str):
         """Gets the value of a data node."""
         data_tree: list[Tree] = list(some_tree.find_data(data))
         return data_tree[0].children[0].value
 
-    def as_value(self, some_tree: Tree) -> AllTypes:
+    def _as_value(self, some_tree: Tree) -> AllTypes:
         """
         Gets the value of a node. Depending on the type of the node
         the Python AST will be invoked to convert the value to the appropriate type.
@@ -96,7 +96,7 @@ class FSQLTree(Transformer):
             case _:
                 return ast.literal_eval(some_tree.children[0].value)
 
-    def as_fsql_match(self, where: Tree) -> AllTypes | list[AllTypes] | None:
+    def _as_fsql_match(self, where: Tree) -> AllTypes | list[AllTypes] | None:
         """
         Gets the value of a match node.
         Depending on the type of the node, the Python AST will be invoked to
@@ -105,7 +105,7 @@ class FSQLTree(Transformer):
         matching = list(where.find_data('matching'))[0].children[0]
 
         if matching.data == 'literal':
-            return ast.literal_eval(self.data_value(matching, "literal"))
+            return ast.literal_eval(self._data_value(matching, "literal"))
 
         if matching.data == "array":
             return [ast.literal_eval(token.children[0].value)
@@ -113,19 +113,19 @@ class FSQLTree(Transformer):
 
         return None
 
-    def as_limit(self, limit: Tree | None) -> list[FSQLWhere] | None:
+    def _as_limit(self, limit: Tree | None) -> list[FSQLWhere] | None:
         """Gets the limit value that is specified in the query."""
         if limit is None:
             return None
-        return self.as_value(limit)
+        return self._as_value(limit)
 
-    def as_output(self, output: Tree | None) -> list[FSQLWhere] | None:
+    def _as_output(self, output: Tree | None) -> list[FSQLWhere] | None:
         """Gets the output value that is specified in the query."""
         if output is None:
             return None
-        return self.as_value(output)
+        return self._as_value(output)
 
-    def as_where(self, where: Tree | None) -> list[FSQLWhere] | None:
+    def _as_where(self, where: Tree | None) -> list[FSQLWhere] | None:
         """Gets the where clause that is specified in the query."""
         if where is None:
             return None
@@ -133,40 +133,40 @@ class FSQLTree(Transformer):
         def token_as_where(token) -> FSQLWhere:
             matching = list(token.find_data("property"))[0]
             return {
-                'field': self.as_value(matching),
-                'operator': self.data_value(token, 'operator'),
-                'value': self.as_fsql_match(token)
+                'field': self._as_value(matching),
+                'operator': self._data_value(token, 'operator'),
+                'value': self._as_fsql_match(token)
             }
 
         return [token_as_where(token) for token in list(where.find_data("comparrison"))]
 
-    def as_identifier(self, identifier: Tree):
+    def _as_identifier(self, identifier: Tree):
         """Gets the identifier that is specified in the query."""
         if identifier is None:
-            return
+            return None
 
-        return self.as_value(list(identifier.find_data("property"))[0])
+        return self._as_value(list(identifier.find_data("property"))[0])
 
-    def as_setters(self, setter: Tree) -> FSQLUpdateSet:
+    def _as_setters(self, setter: Tree) -> FSQLUpdateSet:
         """Gets the setters that are specified in the query."""
         def as_setter(token: Tree):
             matching = list(token.find_data("property"))[0]
             return {
-                "property": self.as_value(matching),
-                "value": self.as_value(token.children[1])
+                "property": self._as_value(matching),
+                "value": self._as_value(token.children[1])
             }
         return list(map(as_setter, list(setter.find_data("setter"))))
 
-    def as_fields(self, select: Tree) -> list[str]:
+    def _as_fields(self, select: Tree) -> list[str]:
         """Gets the fields that are specified in the query."""
         if select.children[0].data.value == "fields":
-            values = [self.as_value(tree) for tree in list(
+            values = [self._as_value(tree) for tree in list(
                 select.children[0].find_data("property"))]
             return values
 
         return "*"
 
-    def as_fsql_subject_type(self, subject_type: Tree):
+    def _as_fsql_subject_type(self, subject_type: Tree):
         """Determines the subject type that the query is referring to."""
         match subject_type.children[0].type:
             case "WITHIN":
@@ -176,7 +176,7 @@ class FSQLTree(Transformer):
             case "AT":
                 return FSQLSubjectType.DOCUMENT
 
-    def do_select(self, subset: Tree, subject_type: Tree,
+    def _do_select(self, subset: Tree, subject_type: Tree,
                   subject: Tree, where: Tree | None, limit: Tree | None,
                   output: Tree | None) -> FSQLSelectQuery:
         """
@@ -185,26 +185,26 @@ class FSQLTree(Transformer):
         """
         return {
             "query_type": FSQLQueryType.SELECT,
-            "fields": self.as_fields(subset),
-            "subject": self.as_value(subject),
-            "subject_type": self.as_fsql_subject_type(subject_type),
-            "where": self.as_where(where),
-            "limit": self.as_limit(limit),
-            "output": self.as_output(output)
+            "fields": self._as_fields(subset),
+            "subject": self._as_value(subject),
+            "subject_type": self._as_fsql_subject_type(subject_type),
+            "where": self._as_where(where),
+            "limit": self._as_limit(limit),
+            "output": self._as_output(output)
         }
 
     def select_collection(self, subset: Tree, subject_type: Tree,
                           subject: Tree, where: Tree | None, limit: Tree | None,
                           output: Tree | None):
         """The method for all select collection queries."""
-        return self.do_select(subset, subject_type, subject, where, limit, output)
+        return self._do_select(subset, subject_type, subject, where, limit, output)
 
     def select_document(self, subset: Tree, subject_type: Tree,
                         subject: Tree, output: Tree | None):
         """The method for all select document queries."""
-        return self.do_select(subset, subject_type, subject, where=None, limit=None, output=output)
+        return self._do_select(subset, subject_type, subject, where=None, limit=None, output=output)
 
-    def do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
+    def _do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
         """
         The base method for all update queries.
         Creates the appropate definition of the update query.
@@ -212,39 +212,39 @@ class FSQLTree(Transformer):
 
         return {
             "query_type": FSQLQueryType.UPDATE,
-            "subject": self.as_value(subject),
-            "subject_type": self.as_fsql_subject_type(subject_type),
-            "where": self.as_where(where),
-            "set": self.as_setters(setter)
+            "subject": self._as_value(subject),
+            "subject_type": self._as_fsql_subject_type(subject_type),
+            "where": self._as_where(where),
+            "set": self._as_setters(setter)
         }
 
     def update_collection(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree):
         """The method for all update collection queries."""
-        return self.do_update(subject_type, subject, setter, where)
+        return self._do_update(subject_type, subject, setter, where)
 
     def update_document(self, subject_type: Tree, subject: Tree, setter: Tree):
         """The method for all update document queries."""
-        return self.do_update(subject_type, subject, setter, where=None)
+        return self._do_update(subject_type, subject, setter, where=None)
 
-    def do_delete(self, subject_type: Tree, subject: Tree, where: Tree):
+    def _do_delete(self, subject_type: Tree, subject: Tree, where: Tree):
         """
         The base method for all delete queries.
         Creates the appropate definition of the delete query.
         """
         return {
             "query_type": FSQLQueryType.DELETE,
-            "subject": self.as_value(subject),
-            "subject_type": self.as_fsql_subject_type(subject_type),
-            "where": self.as_where(where)
+            "subject": self._as_value(subject),
+            "subject_type": self._as_fsql_subject_type(subject_type),
+            "where": self._as_where(where)
         }
 
     def delete_collection(self, subject_type: Tree, subject: Tree, where: Tree):
         """The method for all delete collection queries."""
-        return self.do_delete(subject_type, subject, where)
+        return self._do_delete(subject_type, subject, where)
 
     def delete_document(self, subject_type: Tree, subject: Tree):
         """The method for all delete document queries."""
-        return self.do_delete(subject_type, subject, where=None)
+        return self._do_delete(subject_type, subject, where=None)
 
     def show_collections(self):
         """The method for all show collections queries."""
@@ -259,10 +259,10 @@ class FSQLTree(Transformer):
         """The method for all insert document queries."""
         return {
             "query_type": FSQLQueryType.INSERT,
-            "subject": self.as_value(subject),
+            "subject": self._as_value(subject),
             "subject_type": FSQLSubjectType.COLLECTION,
-            "set": self.as_setters(setter),
-            "identifier": self.as_identifier(identifier)
+            "set": self._as_setters(setter),
+            "identifier": self._as_identifier(identifier)
         }
 
 def parse(query: str) -> FSQLQuery:
