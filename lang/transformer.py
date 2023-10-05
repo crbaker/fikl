@@ -1,12 +1,17 @@
 """transformer for lark processing."""
 import ast
+import os
+import sys
+
 from enum import Enum
 from typing import TypedDict
 from typing import Union
-from lark import Transformer, v_args, Tree
+from lark import Lark, Transformer, v_args, Tree
 
 AllTypes = Union[int, float, str, bool, None]
 
+class QuerySyntaxError(Exception):
+    """Raised when the syntax of the query is invalid."""
 
 class FSQLQueryType(Enum):
     """The different kinds of supported query types."""
@@ -225,3 +230,58 @@ class FSQLTree(Transformer):
             "subject_type": FSQLSubjectType.COLLECTION,
             "where": None
         }
+
+
+def parse(query: str) -> FSQLQuery:
+    """
+    Uses Lark to parse the query against the grammar and then provides a tokenised query
+    """
+    try:
+
+        parse_tree = build_parse_tree(query)
+
+        ql_tree = FSQLTree().transform(parse_tree)
+        fsql_query: FSQLQuery = ql_tree.children[0]
+        return fsql_query
+    except Exception as err:
+        raise QuerySyntaxError(err) from err
+
+
+def build_parse_tree(query: str):
+    """
+    Parses the supplied query against the grammar and returns the parse tree.
+
+    Returns:
+        The Lark Tree that represents the tokenized query.
+    """
+    grammar = read_grammar()
+
+    parser = Lark(grammar, lexer="basic")
+    return parser.parse(query)
+
+
+def resource_path(relative_path):
+    """
+    Fetches the base path of the running application. If running from a built
+    version then the _MEIPASS environment variable will be present.
+
+    Returns:
+        str: The base path of the running application.
+    """
+    try:
+        base_path = sys._MEIPASS
+    except (AttributeError, ModuleNotFoundError):
+        base_path = os.environ.get("_MEIPASS2", os.path.abspath("."))
+
+    return os.path.join(base_path, relative_path)
+
+
+def read_grammar():
+    """
+    Reads the grammar file for the FSQL language.
+
+    Returns:
+        str: The contents of the grammar file.
+    """
+    with open(resource_path("fsql.lark"), encoding="utf-8") as file:
+        return file.read()

@@ -1,10 +1,8 @@
 """This module provides the fsql query details."""
 # lang/ql.py
 
-import os
-import sys
 from collections import defaultdict
-from lark import Lark
+
 
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
@@ -13,8 +11,7 @@ from lang.transformer import (FSQLQuery,
                               FSQLQueryType,
                               FSQLSelectQuery,
                               FSQLSubjectType,
-                              FSQLTree,
-                              FSQLUpdateQuery)
+                              FSQLUpdateQuery, parse)
 
 
 class QueryError(ValueError):
@@ -25,18 +22,6 @@ class QueryError(ValueError):
         message -- explanation of the error
     """
 
-def build_parse_tree(query: str):
-    """
-    Parses the supplied query against the grammar and returns the parse tree.
-
-    Returns:
-        The Lark Tree that represents the tokenized query.
-    """
-    grammar = read_grammar()
-
-    parser = Lark(grammar, lexer="basic")
-    return parser.parse(query)
-
 def run_query(query: str) -> list[dict] | dict:
     """
     Parses the supplied query against the grammar and and executes the query.
@@ -46,10 +31,7 @@ def run_query(query: str) -> list[dict] | dict:
         int: The number of records affected.
     """
     try:
-        parse_tree = build_parse_tree(query)
-
-        ql_tree = FSQLTree().transform(parse_tree)
-        fsql_query: FSQLQuery = ql_tree.children[0]
+        fsql_query: FSQLQuery = parse(query)
 
         response = execute_query(fsql_query)
 
@@ -301,29 +283,3 @@ def execute_select_query(fsql_query: FSQLSelectQuery) -> list[firestore.Document
             return execute_collection_query(client.collection(fsql_query["subject"]))
         case FSQLSubjectType.DOCUMENT:
             return [client.document(fsql_query["subject"]).get()]
-
-
-def resource_path(relative_path):
-    """
-    Fetches the base path of the running application. If running from a built
-    version then the _MEIPASS environment variable will be present.
-
-    Returns:
-        str: The base path of the running application.
-    """
-    try:
-        base_path = sys._MEIPASS
-    except (AttributeError, ModuleNotFoundError):
-        base_path = os.environ.get("_MEIPASS2", os.path.abspath("."))
-
-    return os.path.join(base_path, relative_path)
-
-
-def read_grammar():
-    """
-    Reads the grammar file for the FSQL language.
-
-    Returns:
-        str: The contents of the grammar file.
-    """
-    return open(resource_path("fsql.lark"), encoding="utf-8").read()
