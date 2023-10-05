@@ -10,8 +10,10 @@ from lark import Lark, Transformer, v_args, Tree
 
 AllTypes = Union[int, float, str, bool, None]
 
+
 class QuerySyntaxError(Exception):
     """Raised when the syntax of the query is invalid."""
+
 
 class FSQLQueryType(Enum):
     """The different kinds of supported query types."""
@@ -19,6 +21,7 @@ class FSQLQueryType(Enum):
     UPDATE = 2
     DELETE = 3
     SHOW = 4
+    INSERT = 5
 
 
 class FSQLSubjectType(Enum):
@@ -52,6 +55,12 @@ class FSQLUpdateSet(TypedDict):
 class FSQLUpdateQuery(FSQLQuery):
     """The definition of an update query."""
     set: list[FSQLUpdateSet]
+
+
+class FSQLInsertQuery(FSQLQuery):
+    """The definition of an insert query."""
+    set: list[FSQLUpdateSet]
+    identifier: str
 
 
 class FSQLSelectQuery(FSQLQuery):
@@ -131,6 +140,13 @@ class FSQLTree(Transformer):
 
         return [token_as_where(token) for token in list(where.find_data("comparrison"))]
 
+    def as_identifier(self, identifier: Tree):
+        """Gets the identifier that is specified in the query."""
+        if identifier is None:
+            return
+
+        return self.as_value(list(identifier.find_data("property"))[0])
+
     def as_setters(self, setter: Tree) -> FSQLUpdateSet:
         """Gets the setters that are specified in the query."""
         def as_setter(token: Tree):
@@ -188,30 +204,29 @@ class FSQLTree(Transformer):
         """The method for all select document queries."""
         return self.do_select(subset, subject_type, subject, where=None, limit=None, output=output)
 
-    def update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
+    def do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
         """
         The base method for all update queries.
         Creates the appropate definition of the update query.
         """
-        setters = self.as_setters(setter)
 
         return {
             "query_type": FSQLQueryType.UPDATE,
             "subject": self.as_value(subject),
             "subject_type": self.as_fsql_subject_type(subject_type),
             "where": self.as_where(where),
-            "set": setters
+            "set": self.as_setters(setter)
         }
 
     def update_collection(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree):
         """The method for all update collection queries."""
-        return self.update(subject_type, subject, setter, where)
+        return self.do_update(subject_type, subject, setter, where)
 
     def update_document(self, subject_type: Tree, subject: Tree, setter: Tree):
         """The method for all update document queries."""
-        return self.update(subject_type, subject, setter, where=None)
+        return self.do_update(subject_type, subject, setter, where=None)
 
-    def delete(self, subject_type: Tree, subject: Tree, where: Tree):
+    def do_delete(self, subject_type: Tree, subject: Tree, where: Tree):
         """
         The base method for all delete queries.
         Creates the appropate definition of the delete query.
@@ -225,11 +240,11 @@ class FSQLTree(Transformer):
 
     def delete_collection(self, subject_type: Tree, subject: Tree, where: Tree):
         """The method for all delete collection queries."""
-        return self.delete(subject_type, subject, where)
+        return self.do_delete(subject_type, subject, where)
 
     def delete_document(self, subject_type: Tree, subject: Tree):
         """The method for all delete document queries."""
-        return self.delete(subject_type, subject, where=None)
+        return self.do_delete(subject_type, subject, where=None)
 
     def show_collections(self):
         """The method for all show collections queries."""
@@ -240,6 +255,15 @@ class FSQLTree(Transformer):
             "where": None
         }
 
+    def insert_document(self, subject: Tree, setter: Tree, identifier: Tree) -> FSQLInsertQuery:
+        """The method for all insert document queries."""
+        return {
+            "query_type": FSQLQueryType.INSERT,
+            "subject": self.as_value(subject),
+            "subject_type": FSQLSubjectType.COLLECTION,
+            "set": self.as_setters(setter),
+            "identifier": self.as_identifier(identifier)
+        }
 
 def parse(query: str) -> FSQLQuery:
     """

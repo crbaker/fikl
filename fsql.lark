@@ -9,6 +9,8 @@ instruction: "select" subset collection_type subject [where] [limit] [output] ->
     | "delete" collection_type subject where -> delete_collection
     | "delete" document_type subject -> delete_document
 
+    | "insert" "into" subject "set" set [id] -> insert_document
+
     | "show" "collections" -> show_collections
 
 where: "where" comparrison ("and" comparrison)*
@@ -25,6 +27,8 @@ fields: property ("," property)*
 set: setter ("," setter)*
 setter: property "=" literal
 
+id: IDENTIFIED BY property
+
 property: ESCAPED_STRING | CNAME
 subject: ESCAPED_STRING | CNAME
 literal: ESCAPED_STRING | NUMBER | SIGNED_NUMBER | NULL
@@ -34,6 +38,9 @@ array: "[" literal ("," literal)* "]"
 output: "output" ESCAPED_STRING
 
 ALL: "*"
+
+IDENTIFIED: "identified"
+BY: "by"
 
 WITHIN: "within"
 FROM: "from"

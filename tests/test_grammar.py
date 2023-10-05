@@ -179,6 +179,28 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(query["subject"], "COLLECTION")
         self.assertEqual(query["output"], "~/output.json")
 
+    def test_should_parse_valid_insert(self):
+        query = parse('insert into COLLECTION set some_field = 2000, some_other_field = "ABC", "some.nested.field" = "something" identified by "ABCD"')
+
+        self.assertEqual(query["query_type"], FSQLQueryType.INSERT)
+        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["subject"], "COLLECTION")
+
+        self.assertIsNotNone(query["set"])
+        self.assertEqual(len(query["set"]), 3)
+
+        self.assertEqual(query["set"][0]["property"], "some_field")
+        self.assertEqual(query["set"][0]["value"], 2000)
+
+        self.assertEqual(query["set"][1]["property"], "some_other_field")
+        self.assertEqual(query["set"][1]["value"], "ABC")
+        self.assertEqual(query["identifier"], "ABCD")
+
+    def test_should_parse_valid_insert_with_no_identifier(self):
+        query = parse('insert into COLLECTION set some_field = 2000, some_other_field = "ABC", "some.nested.field" = "something"')
+
+        self.assertEqual(query["identifier"], None)
+
     def test_should_not_parse_document_select_that_has_where(self):
         with self.assertRaises(QuerySyntaxError):
             parse("""

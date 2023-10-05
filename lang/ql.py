@@ -12,6 +12,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from lang.transformer import (FSQLQuery,
                               FSQLQueryType,
                               FSQLSelectQuery,
+                              FSQLInsertQuery,
                               FSQLSubjectType,
                               FSQLUpdateQuery, parse)
 
@@ -215,6 +216,8 @@ def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | i
                 return execute_delete_query
             case FSQLQueryType.SHOW:
                 return execute_show_query
+            case FSQLQueryType.INSERT:
+                return execute_insert_query
             case _:
                 return lambda x: []
 
@@ -255,12 +258,12 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
 
     count = 0
     new_values = merge_setters(fsql_query["set"])
+
+    dicts = [expand_key({}, key, value)
+             for key, value in new_values.items()]
+    merged_dict = merge_dicts(dicts)
+
     for doc in docs:
-
-        dicts = [expand_key({}, key, value)
-                 for key, value in new_values.items()]
-        merged_dict = merge_dicts(dicts)
-
         try:
             doc.reference.update(merged_dict)
             count += 1
@@ -268,6 +271,25 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
             pass
 
     return count
+
+
+def execute_insert_query(fsql_query: FSQLInsertQuery) -> int:
+    """
+    Inserts a document into the Firestore database.
+
+    Returns:
+        int: The number of documents inserted.
+    """
+    new_values = merge_setters(fsql_query["set"])
+
+    dicts = [expand_key({}, key, value)
+             for key, value in new_values.items()]
+    merged_dict = merge_dicts(dicts)
+
+    client = firestore.Client()
+    client.collection(fsql_query["subject"]).add(
+        merged_dict, document_id=fsql_query["identifier"])
+    return 1
 
 
 def execute_show_query(_: FSQLSelectQuery) -> list[str]:
