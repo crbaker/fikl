@@ -2,6 +2,7 @@
 # lang/cli.py
 
 import os.path
+import os
 import atexit
 import readline
 import json
@@ -22,6 +23,9 @@ def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] 
     Typer command handler to handle the query command.
     """
     try:
+        if (env_var := 'GOOGLE_APPLICATION_CREDENTIALS') not in os.environ:
+            rprint(f"""[italic yellow]Warning: ${env_var} is not set[/italic yellow]""")
+
         if query_text is None:
             start_repl()
         else:
