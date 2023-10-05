@@ -25,7 +25,7 @@ The FIKL CLI tool allows for SQL-like queries to be executed against a Firestore
 1. Create a new virtual environment so that you can have an isolated python environment
 ```sh
 virtualenv venv
-source env_name/bin/activate
+source venv/bin/activate
 ```
 2. Install the required dependencies
 ```sh
