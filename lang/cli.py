@@ -3,35 +3,45 @@
 
 import os.path
 import atexit
+import readline
+import json
 
 import typer
-import json
-import readline
-from typing_extensions import Annotated, Optional
+from typing_extensions import Annotated
 from rich import print as rprint, print_json
 
-from lang import (__app_name__, __version__, ql)
+from lang import ql
 
 app = typer.Typer(rich_markup_mode="rich")
 
+QUERY_COMMAND_HELP = "The FSQL query to execute against the Firestore database."
 
 @app.command(epilog="See https://github.com/crbaker/fsql for more details.")
-def query(query_text: Annotated[Optional[str], typer.Argument(help="The FSQL query to execute against the Firestore database.")] = None):
+def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] = None):
+    """
+    Typer command handler to handle the query command.
+    """
     try:
         if query_text is None:
             start_repl()
         else:
             run_query_and_output(query_text)
-    except Exception as e:
-        typer.echo(e)
+    except ql.QueryError as exception:
+        typer.echo(exception)
 
 
 def run_query_and_output(query_text):
+    """
+    Runs the supplied query and outputs the results.
+    """
     results = ql.run_query(query_text)
     print_json(json.dumps(results, indent=2))
 
 
 def start_repl():
+    """
+    Sets up and start the FSQL REPL
+    """
     go_again = True
 
     history_path = os.path.expanduser("~/.fsql_history")
@@ -68,8 +78,8 @@ def start_repl():
         elif current_query.endswith(';'):
             try:
                 run_query_and_output(current_query[:-1])
-            except Exception as e:
+            except ql.QueryError as exception:
                 rprint("[italic red]Query Error[/italic red] :exploding_head:")
-                rprint(e)
+                rprint(exception)
             finally:
                 current_query = None
