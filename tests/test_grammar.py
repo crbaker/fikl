@@ -171,6 +171,14 @@ class TestTransformer(unittest.TestCase):
 
         self.assertIsNone(query["where"])
 
+    def test_should_parse_valid_show_with_output(self):
+        query = parse('select * from COLLECTION where some_field == 2000 output "~/output.json"')
+
+        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
+        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["subject"], "COLLECTION")
+        self.assertEqual(query["output"], "~/output.json")
+
     def test_should_not_parse_document_select_that_has_where(self):
         with self.assertRaises(QuerySyntaxError):
             parse("""

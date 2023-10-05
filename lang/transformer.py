@@ -58,6 +58,7 @@ class FSQLSelectQuery(FSQLQuery):
     """The definition of a select query."""
     fields: list[str] | str
     limit: int | None
+    output: str | None
 
 
 @v_args(inline=True)    # Affects the signatures of the methods
@@ -108,6 +109,12 @@ class FSQLTree(Transformer):
         if limit is None:
             return None
         return self.as_value(limit)
+    
+    def as_output(self, output: Tree | None) -> list[FSQLWhere] | None:
+        """Gets the output value that is specified in the query."""
+        if output is None:
+            return None
+        return self.as_value(output)
 
     def as_where(self, where: Tree | None) -> list[FSQLWhere] | None:
         """Gets the where clause that is specified in the query."""
@@ -154,7 +161,8 @@ class FSQLTree(Transformer):
                 return FSQLSubjectType.DOCUMENT
 
     def do_select(self, subset: Tree, subject_type: Tree,
-                  subject: Tree, where: Tree | None, limit: Tree | None) -> FSQLSelectQuery:
+                  subject: Tree, where: Tree | None, limit: Tree | None,
+                  output: Tree | None) -> FSQLSelectQuery:
         """
         The base method for all select queries.
         Creates the appropate definition of the select query.
@@ -165,17 +173,20 @@ class FSQLTree(Transformer):
             "subject": self.as_value(subject),
             "subject_type": self.as_fsql_subject_type(subject_type),
             "where": self.as_where(where),
-            "limit": self.as_limit(limit)
+            "limit": self.as_limit(limit),
+            "output": self.as_output(output)
         }
 
     def select_collection(self, subset: Tree, subject_type: Tree,
-                          subject: Tree, where: Tree | None, limit: Tree | None):
+                          subject: Tree, where: Tree | None, limit: Tree | None,
+                          output: Tree | None):
         """The method for all select collection queries."""
-        return self.do_select(subset, subject_type, subject, where, limit)
+        return self.do_select(subset, subject_type, subject, where, limit, output)
 
-    def select_document(self, subset: Tree, subject_type: Tree, subject: Tree):
+    def select_document(self, subset: Tree, subject_type: Tree,
+                        subject: Tree, output: Tree | None):
         """The method for all select document queries."""
-        return self.do_select(subset, subject_type, subject, where=None, limit=None)
+        return self.do_select(subset, subject_type, subject, where=None, limit=None, output=output)
 
     def update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
         """

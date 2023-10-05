@@ -1,5 +1,7 @@
 """This module provides the fsql query details."""
 # lang/ql.py
+import json
+import os
 
 from collections import defaultdict
 
@@ -22,6 +24,11 @@ class QueryError(ValueError):
         message -- explanation of the error
     """
 
+
+def should_output(fsql_query: FSQLQuery) -> bool:
+    return "output" in fsql_query and object_exists(fsql_query["output"])
+
+
 def run_query(query: str) -> list[dict] | dict:
     """
     Parses the supplied query against the grammar and and executes the query.
@@ -32,16 +39,33 @@ def run_query(query: str) -> list[dict] | dict:
     """
     try:
         fsql_query: FSQLQuery = parse(query)
-
         response = execute_query(fsql_query)
 
         if isinstance(response, int):
             return {"count": response}
-        return [snapshot_to_document_fn(fsql_query)(doc) for doc in response if object_exists(doc)]
+
+        documents = [snapshot_to_document_fn(fsql_query)(
+            doc) for doc in response if object_exists(doc)]
+
+        if should_output(fsql_query):
+            saved_to_path = output_json_to_file(json.dumps(
+                documents, indent=2), fsql_query["output"])
+            return {"count": len(documents), "file": saved_to_path}
+        else:
+            return documents
     except QueryError:
         raise
     except Exception as exception:
         raise QueryError(exception) from exception
+
+
+def output_json_to_file(json_output: str, path: str):
+    """ Writes the provided json to the provided path."""
+    full_path = os.path.expanduser(path)
+    with open(full_path, "w", encoding="utf-8") as file:
+        file.write(json_output)
+
+    return full_path
 
 
 def merge_setters(dicts: list[dict]) -> dict:
@@ -232,7 +256,8 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
     new_values = merge_setters(fsql_query["set"])
     for doc in docs:
 
-        dicts = [expand_key({}, key, value) for key, value in new_values.items()]
+        dicts = [expand_key({}, key, value)
+                 for key, value in new_values.items()]
         merged_dict = merge_dicts(dicts)
 
         try:

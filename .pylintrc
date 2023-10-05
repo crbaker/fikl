@@ -105,6 +105,7 @@ disable=
     broad-exception-caught,
     unsupported-binary-operation,
     bad-builtin,
+    too-many-try-statements,
     # We anticipate #3512 where it will become optional
     fixme
 
