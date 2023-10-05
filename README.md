@@ -32,7 +32,13 @@ source env_name/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Use `pyinstaller` to create an executable. A `dist` directory will be created which will include the executable.
+3. Run lint and tests
+```sh
+pylint lang
+python -m coverage run -m unittest
+```
+
+4. Use `pyinstaller` to create an executable. A `dist` directory will be created which will include the executable.
 ```sh
 pyinstaller --clean -n fsql --add-data "fsql.lark:." ./lang/__main__.py
 ./dist/fsql/fsql
