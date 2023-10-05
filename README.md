@@ -117,5 +117,12 @@ A `where` clause is mandatory when deleting documents in a collection or collect
 delete from SOME_COLLECTION where year == 2005
 ```
 
+#### Insert (add) a document into a collection (or collection group)
+The identifier of the document that is being inserted is optional. If the "identified by" is not supplied, Firestore will automatically
+set a document ID
+```sql
+insert into SOME_COLLECTION set year = 2005, title = "Mutants", "author.firstName" = "Armand", "author.lastName" = "Marie Leroi" identified by "SOME_ID"
+```
+
 ## Powerfull when used with `jq`
 https://jqlang.github.io/jq/
