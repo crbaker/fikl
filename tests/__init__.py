@@ -1,2 +1,2 @@
-"""Top-level test package for FSQL."""
+"""Top-level test package for FIKL."""
 # tests/__init__.py

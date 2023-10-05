@@ -1,4 +1,4 @@
-"""This module provides the fsql query details."""
+"""This module provides the fikl query details."""
 # lang/ql.py
 import json
 import os
@@ -9,12 +9,12 @@ from collections import defaultdict
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
-from lang.transformer import (FSQLQuery,
-                              FSQLQueryType,
-                              FSQLSelectQuery,
-                              FSQLInsertQuery,
-                              FSQLSubjectType,
-                              FSQLUpdateQuery, parse)
+from lang.transformer import (FIKLQuery,
+                              FIKLQueryType,
+                              FIKLSelectQuery,
+                              FIKLInsertQuery,
+                              FIKLSubjectType,
+                              FIKLUpdateQuery, parse)
 
 
 class QueryError(ValueError):
@@ -26,9 +26,9 @@ class QueryError(ValueError):
     """
 
 
-def should_output(fsql_query: FSQLQuery) -> bool:
+def should_output(fikl_query: FIKLQuery) -> bool:
     "Indicates if the output of the query should be saved to a file"
-    return "output" in fsql_query and object_exists(fsql_query["output"])
+    return "output" in fikl_query and object_exists(fikl_query["output"])
 
 
 def run_query(query: str) -> list[dict] | dict:
@@ -40,18 +40,18 @@ def run_query(query: str) -> list[dict] | dict:
         int: The number of records affected.
     """
     try:
-        fsql_query: FSQLQuery = parse(query)
-        response = execute_query(fsql_query)
+        fikl_query: FIKLQuery = parse(query)
+        response = execute_query(fikl_query)
 
         if isinstance(response, int):
             return {"count": response}
 
-        documents = [snapshot_to_document_fn(fsql_query)(
+        documents = [snapshot_to_document_fn(fikl_query)(
             doc) for doc in response if object_exists(doc)]
 
-        if should_output(fsql_query):
+        if should_output(fikl_query):
             saved_to_path = output_json_to_file(json.dumps(
-                documents, indent=2), fsql_query["output"])
+                documents, indent=2), fikl_query["output"])
             return {"count": len(documents), "file": saved_to_path}
 
         return documents
@@ -155,7 +155,7 @@ def object_exists(obj: dict) -> bool:
     return obj is not None
 
 
-def snapshot_to_document_fn(fsql_query: FSQLQuery):
+def snapshot_to_document_fn(fikl_query: FIKLQuery):
     """
     Creates a function that can be used to convert a firestore.DocumentSnapshot to a dictionary.
     This function will also reduce the returned fields to only those requested in the query.
@@ -163,7 +163,7 @@ def snapshot_to_document_fn(fsql_query: FSQLQuery):
     Returns:
         The function that can be called to convert a firestore.DocumentSnapshot to a dictionary.
     """
-    requested_fields = fsql_query["fields"] if "fields" in fsql_query else "*"
+    requested_fields = fikl_query["fields"] if "fields" in fikl_query else "*"
 
     def extract_fields_from_snapshot(response: firestore.DocumentSnapshot | str):
         if isinstance(response, str):
@@ -180,15 +180,15 @@ def snapshot_to_document_fn(fsql_query: FSQLQuery):
     return extract_fields_from_snapshot
 
 
-def add_where_clauses(query: firestore.Query, fsql_query: FSQLQuery) -> firestore.Query:
+def add_where_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestore.Query:
     """
     Adds the where clauses to the query.
 
     Returns:
         firestore.Query: The query with the where clauses added.
     """
-    if fsql_query["where"] is not None:
-        for where in fsql_query["where"]:
+    if fikl_query["where"] is not None:
+        for where in fikl_query["where"]:
             field_filter = FieldFilter(
                 where["field"], where["operator"], where["value"])
             query = query.where(filter=field_filter)
@@ -197,7 +197,7 @@ def add_where_clauses(query: firestore.Query, fsql_query: FSQLQuery) -> firestor
     return query
 
 
-def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | int:
+def execute_query(fikl_query: FIKLQuery) -> list[firestore.DocumentSnapshot] | int:
     """
     Determines the appropraite query function to execute based on the query type.
 
@@ -206,34 +206,34 @@ def execute_query(fsql_query: FSQLQuery) -> list[firestore.DocumentSnapshot] | i
         list: The list of records recturned in the case of a select query
     """
 
-    def fn_for_query(fsql_query: FSQLQuery):
-        match fsql_query["query_type"]:
-            case FSQLQueryType.SELECT:
+    def fn_for_query(fikl_query: FIKLQuery):
+        match fikl_query["query_type"]:
+            case FIKLQueryType.SELECT:
                 return execute_select_query
-            case FSQLQueryType.UPDATE:
+            case FIKLQueryType.UPDATE:
                 return execute_update_query
-            case FSQLQueryType.DELETE:
+            case FIKLQueryType.DELETE:
                 return execute_delete_query
-            case FSQLQueryType.SHOW:
+            case FIKLQueryType.SHOW:
                 return execute_show_query
-            case FSQLQueryType.INSERT:
+            case FIKLQueryType.INSERT:
                 return execute_insert_query
             case _:
                 return lambda x: []
 
-    query_fn = fn_for_query(fsql_query)
+    query_fn = fn_for_query(fikl_query)
 
-    return query_fn(fsql_query)
+    return query_fn(fikl_query)
 
 
-def execute_delete_query(fsql_query: FSQLUpdateQuery) -> int:
+def execute_delete_query(fikl_query: FIKLUpdateQuery) -> int:
     """
     Executes a delete query against the Firestore database.
 
     Returns:
         int: The number of records deleted.
     """
-    docs = execute_select_query(fsql_query)
+    docs = execute_select_query(fikl_query)
 
     count = 0
 
@@ -247,17 +247,17 @@ def execute_delete_query(fsql_query: FSQLUpdateQuery) -> int:
     return count
 
 
-def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
+def execute_update_query(fikl_query: FIKLUpdateQuery) -> int:
     """
     Executes an update query against the Firestore database.
 
     Returns:
         int: The number of records updated.
     """
-    docs = execute_select_query(fsql_query)
+    docs = execute_select_query(fikl_query)
 
     count = 0
-    new_values = merge_setters(fsql_query["set"])
+    new_values = merge_setters(fikl_query["set"])
 
     dicts = [expand_key({}, key, value)
              for key, value in new_values.items()]
@@ -273,26 +273,26 @@ def execute_update_query(fsql_query: FSQLUpdateQuery) -> int:
     return count
 
 
-def execute_insert_query(fsql_query: FSQLInsertQuery) -> int:
+def execute_insert_query(fikl_query: FIKLInsertQuery) -> int:
     """
     Inserts a document into the Firestore database.
 
     Returns:
         int: The number of documents inserted.
     """
-    new_values = merge_setters(fsql_query["set"])
+    new_values = merge_setters(fikl_query["set"])
 
     dicts = [expand_key({}, key, value)
              for key, value in new_values.items()]
     merged_dict = merge_dicts(dicts)
 
     client = firestore.Client()
-    client.collection(fsql_query["subject"]).add(
-        merged_dict, document_id=fsql_query["identifier"])
+    client.collection(fikl_query["subject"]).add(
+        merged_dict, document_id=fikl_query["identifier"])
     return 1
 
 
-def execute_show_query(_: FSQLSelectQuery) -> list[str]:
+def execute_show_query(_: FIKLSelectQuery) -> list[str]:
     """
     Fetches the list of root level collections from the Firestore database.
 
@@ -308,7 +308,7 @@ def execute_show_query(_: FSQLSelectQuery) -> list[str]:
     return collections
 
 
-def execute_select_query(fsql_query: FSQLSelectQuery) -> list[firestore.DocumentSnapshot]:
+def execute_select_query(fikl_query: FIKLSelectQuery) -> list[firestore.DocumentSnapshot]:
     """
     Executes a select query against the Firestore database.
 
@@ -318,16 +318,16 @@ def execute_select_query(fsql_query: FSQLSelectQuery) -> list[firestore.Document
     client = firestore.Client()
 
     def execute_collection_query(query: firestore.Query) -> list[firestore.DocumentSnapshot]:
-        query = add_where_clauses(query, fsql_query)
-        if "limit" in fsql_query and fsql_query["limit"] is not None:
-            query = query.limit(fsql_query["limit"])
+        query = add_where_clauses(query, fikl_query)
+        if "limit" in fikl_query and fikl_query["limit"] is not None:
+            query = query.limit(fikl_query["limit"])
 
         return query.get()
 
-    match fsql_query["subject_type"]:
-        case FSQLSubjectType.COLLECTION_GROUP:
-            return execute_collection_query(client.collection_group(fsql_query["subject"]))
-        case FSQLSubjectType.COLLECTION:
-            return execute_collection_query(client.collection(fsql_query["subject"]))
-        case FSQLSubjectType.DOCUMENT:
-            return [client.document(fsql_query["subject"]).get()]
+    match fikl_query["subject_type"]:
+        case FIKLSubjectType.COLLECTION_GROUP:
+            return execute_collection_query(client.collection_group(fikl_query["subject"]))
+        case FIKLSubjectType.COLLECTION:
+            return execute_collection_query(client.collection(fikl_query["subject"]))
+        case FIKLSubjectType.DOCUMENT:
+            return [client.document(fikl_query["subject"]).get()]

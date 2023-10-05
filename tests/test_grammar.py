@@ -3,7 +3,7 @@
 import unittest
 
 from lang.transformer import (parse, read_grammar, build_parse_tree,
-                              FSQLQueryType, FSQLSubjectType, QuerySyntaxError)
+                              FIKLQueryType, FIKLSubjectType, QuerySyntaxError)
 
 
 class TestTransformer(unittest.TestCase):
@@ -18,9 +18,9 @@ class TestTransformer(unittest.TestCase):
 
     def test_should_parse_valid_select_query(self):
         query = parse('select * from SOME_COLLECTION')
-        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
+        self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
         self.assertEqual(query["fields"], "*")
-        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
         self.assertEqual(query["subject"], "SOME_COLLECTION")
         self.assertIsNone(query["where"])
         self.assertIsNone(query["limit"])
@@ -28,18 +28,18 @@ class TestTransformer(unittest.TestCase):
     def test_should_parse_valid_select_with_fields_query(self):
         query = parse(
             'select first_field, "some.nested.field" from SOME_COLLECTION')
-        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
+        self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
         self.assertEqual(query["fields"], ["first_field", "some.nested.field"])
-        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
         self.assertEqual(query["subject"], "SOME_COLLECTION")
         self.assertIsNone(query["where"])
         self.assertIsNone(query["limit"])
 
     def test_should_parse_valid_select_with_limit_query(self):
         query = parse('select * from SOME_COLLECTION limit 10')
-        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
+        self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
         self.assertEqual(query["fields"], "*")
-        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
         self.assertEqual(query["subject"], "SOME_COLLECTION")
         self.assertIsNone(query["where"])
         self.assertEqual(query["limit"], 10)
@@ -79,8 +79,8 @@ class TestTransformer(unittest.TestCase):
             update at "SOME_COLLECTION/DOC_ID"
                       set some_field = "ABC", some_other_field = 2000, some_nullable_field = null
         """)
-        self.assertEqual(query["query_type"], FSQLQueryType.UPDATE)
-        self.assertEqual(query["subject_type"], FSQLSubjectType.DOCUMENT)
+        self.assertEqual(query["query_type"], FIKLQueryType.UPDATE)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.DOCUMENT)
 
         self.assertIsNotNone(query["set"])
         self.assertEqual(len(query["set"]), 3)
@@ -130,34 +130,34 @@ class TestTransformer(unittest.TestCase):
 
     def test_should_parse_valid_select_on_collection_group(self):
         query = parse('select * within SOME_COLLECTION_GROUP limit 10')
-        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
+        self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
         self.assertEqual(query["fields"], "*")
         self.assertEqual(query["subject_type"],
-                         FSQLSubjectType.COLLECTION_GROUP)
+                         FIKLSubjectType.COLLECTION_GROUP)
         self.assertEqual(query["subject"], "SOME_COLLECTION_GROUP")
         self.assertIsNone(query["where"])
         self.assertEqual(query["limit"], 10)
 
     def test_should_parse_valid_select_on_document(self):
         query = parse('select * at "SOME_COLLECTION/DOC_ID"')
-        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
+        self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
         self.assertEqual(query["fields"], "*")
         self.assertEqual(query["subject_type"],
-                         FSQLSubjectType.DOCUMENT)
+                         FIKLSubjectType.DOCUMENT)
         self.assertEqual(query["subject"], "SOME_COLLECTION/DOC_ID")
         self.assertIsNone(query["where"])
         self.assertIsNone(query["limit"], 10)
 
     def test_should_parse_valid_show_query(self):
         query = parse('show collections')
-        self.assertEqual(query["query_type"], FSQLQueryType.SHOW)
-        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["query_type"], FIKLQueryType.SHOW)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
 
     def test_should_parse_valid_delete_query(self):
         query = parse('delete from COLLECTION where some_field == 2000')
 
-        self.assertEqual(query["query_type"], FSQLQueryType.DELETE)
-        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["query_type"], FIKLQueryType.DELETE)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
 
         self.assertIsNotNone(query["where"])
         self.assertEqual(len(query["where"]), 1)
@@ -165,8 +165,8 @@ class TestTransformer(unittest.TestCase):
     def test_should_parse_valid_delete_document_query(self):
         query = parse('delete at "COLLECTION/DOC_ID"')
 
-        self.assertEqual(query["query_type"], FSQLQueryType.DELETE)
-        self.assertEqual(query["subject_type"], FSQLSubjectType.DOCUMENT)
+        self.assertEqual(query["query_type"], FIKLQueryType.DELETE)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.DOCUMENT)
         self.assertEqual(query["subject"], "COLLECTION/DOC_ID")
 
         self.assertIsNone(query["where"])
@@ -174,16 +174,16 @@ class TestTransformer(unittest.TestCase):
     def test_should_parse_valid_show_with_output(self):
         query = parse('select * from COLLECTION where some_field == 2000 output "~/output.json"')
 
-        self.assertEqual(query["query_type"], FSQLQueryType.SELECT)
-        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
         self.assertEqual(query["subject"], "COLLECTION")
         self.assertEqual(query["output"], "~/output.json")
 
     def test_should_parse_valid_insert(self):
         query = parse('insert into COLLECTION set some_field = 2000, some_other_field = "ABC", "some.nested.field" = "something" identified by "ABCD"')
 
-        self.assertEqual(query["query_type"], FSQLQueryType.INSERT)
-        self.assertEqual(query["subject_type"], FSQLSubjectType.COLLECTION)
+        self.assertEqual(query["query_type"], FIKLQueryType.INSERT)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
         self.assertEqual(query["subject"], "COLLECTION")
 
         self.assertIsNotNone(query["set"])

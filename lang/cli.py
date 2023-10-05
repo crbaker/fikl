@@ -1,4 +1,4 @@
-"""This module provides the fsql CLI."""
+"""This module provides the fikl CLI."""
 # lang/cli.py
 
 import os.path
@@ -14,9 +14,9 @@ from lang import ql
 
 app = typer.Typer(rich_markup_mode="rich")
 
-QUERY_COMMAND_HELP = "The FSQL query to execute against the Firestore database."
+QUERY_COMMAND_HELP = "The query to execute against the Firestore database."
 
-@app.command(epilog="See https://github.com/crbaker/fsql for more details.")
+@app.command(epilog="See https://github.com/crbaker/fikl for more details.")
 def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] = None):
     """
     Typer command handler to handle the query command.
@@ -40,11 +40,11 @@ def run_query_and_output(query_text):
 
 def start_repl():
     """
-    Sets up and start the FSQL REPL
+    Sets up and start the FIKL REPL
     """
     go_again = True
 
-    history_path = os.path.expanduser("~/.fsql_history")
+    history_path = os.path.expanduser("~/.fikl_history")
 
     def save_history(history_path=history_path):
         readline.write_history_file(history_path)
@@ -58,7 +58,7 @@ def start_repl():
     readline.parse_and_bind("tab: complete")
     readline.parse_and_bind("set editing-mode vi")
 
-    rprint("[italic pink]FSQL Repl[/italic pink] :fire:")
+    rprint("[italic pink]FIKL Repl[/italic pink] :fire:")
 
     current_query: str = None
 

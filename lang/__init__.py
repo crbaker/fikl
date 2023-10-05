@@ -1,7 +1,7 @@
-"""Top-level package for FSQL."""
+"""Top-level package for FIKL."""
 # lang/__init__.py
 
-__app_name__ = "fsql"
+__app_name__ = "fikl"
 __version__ = "0.1.0"
 
 (

@@ -15,7 +15,7 @@ class QuerySyntaxError(Exception):
     """Raised when the syntax of the query is invalid."""
 
 
-class FSQLQueryType(Enum):
+class FIKLQueryType(Enum):
     """The different kinds of supported query types."""
     SELECT = 1
     UPDATE = 2
@@ -24,55 +24,55 @@ class FSQLQueryType(Enum):
     INSERT = 5
 
 
-class FSQLSubjectType(Enum):
+class FIKLSubjectType(Enum):
     """The different kinds of supported subject types that can be queried."""
     COLLECTION_GROUP = 1
     DOCUMENT = 2
     COLLECTION = 3
 
 
-class FSQLWhere(TypedDict):
+class FIKLWhere(TypedDict):
     """The defniition of a where clause."""
     field: str
     operator: str
     value: int | float | str | list[any]
 
 
-class FSQLQuery(TypedDict):
+class FIKLQuery(TypedDict):
     """The definition of a query. This is the base definition for all queries."""
-    query_type: FSQLQueryType
+    query_type: FIKLQueryType
     subject: str | None
-    subject_type: FSQLSubjectType
-    where: list[FSQLWhere] | None
+    subject_type: FIKLSubjectType
+    where: list[FIKLWhere] | None
 
 
-class FSQLUpdateSet(TypedDict):
+class FIKLUpdateSet(TypedDict):
     """The definition of a setter that is used when updating a Firestore record."""
     property: str
     value: AllTypes
 
 
-class FSQLUpdateQuery(FSQLQuery):
+class FIKLUpdateQuery(FIKLQuery):
     """The definition of an update query."""
-    set: list[FSQLUpdateSet]
+    set: list[FIKLUpdateSet]
 
 
-class FSQLInsertQuery(FSQLQuery):
+class FIKLInsertQuery(FIKLQuery):
     """The definition of an insert query."""
-    set: list[FSQLUpdateSet]
+    set: list[FIKLUpdateSet]
     identifier: str
 
 
-class FSQLSelectQuery(FSQLQuery):
+class FIKLSelectQuery(FIKLQuery):
     """The definition of a select query."""
     fields: list[str] | str
     limit: int | None
     output: str | None
 
 
-@v_args(inline=True)    # Affects the signatures of the methods
-class FSQLTree(Transformer):
-    """The transformer class that is used to transform the Lark parse tree into a FSQLQuery."""
+@v_args(inline=True)
+class FIKLTree(Transformer):
+    """The transformer class that is used to transform the Lark parse tree into a FIKLQuery."""
 
     def __init__(self):
         super().__init__()
@@ -96,7 +96,7 @@ class FSQLTree(Transformer):
             case _:
                 return ast.literal_eval(some_tree.children[0].value)
 
-    def _as_fsql_match(self, where: Tree) -> AllTypes | list[AllTypes] | None:
+    def _as_fikl_match(self, where: Tree) -> AllTypes | list[AllTypes] | None:
         """
         Gets the value of a match node.
         Depending on the type of the node, the Python AST will be invoked to
@@ -113,29 +113,29 @@ class FSQLTree(Transformer):
 
         return None
 
-    def _as_limit(self, limit: Tree | None) -> list[FSQLWhere] | None:
+    def _as_limit(self, limit: Tree | None) -> list[FIKLWhere] | None:
         """Gets the limit value that is specified in the query."""
         if limit is None:
             return None
         return self._as_value(limit)
 
-    def _as_output(self, output: Tree | None) -> list[FSQLWhere] | None:
+    def _as_output(self, output: Tree | None) -> list[FIKLWhere] | None:
         """Gets the output value that is specified in the query."""
         if output is None:
             return None
         return self._as_value(output)
 
-    def _as_where(self, where: Tree | None) -> list[FSQLWhere] | None:
+    def _as_where(self, where: Tree | None) -> list[FIKLWhere] | None:
         """Gets the where clause that is specified in the query."""
         if where is None:
             return None
 
-        def token_as_where(token) -> FSQLWhere:
+        def token_as_where(token) -> FIKLWhere:
             matching = list(token.find_data("property"))[0]
             return {
                 'field': self._as_value(matching),
                 'operator': self._data_value(token, 'operator'),
-                'value': self._as_fsql_match(token)
+                'value': self._as_fikl_match(token)
             }
 
         return [token_as_where(token) for token in list(where.find_data("comparrison"))]
@@ -147,7 +147,7 @@ class FSQLTree(Transformer):
 
         return self._as_value(list(identifier.find_data("property"))[0])
 
-    def _as_setters(self, setter: Tree) -> FSQLUpdateSet:
+    def _as_setters(self, setter: Tree) -> FIKLUpdateSet:
         """Gets the setters that are specified in the query."""
         def as_setter(token: Tree):
             matching = list(token.find_data("property"))[0]
@@ -166,28 +166,28 @@ class FSQLTree(Transformer):
 
         return "*"
 
-    def _as_fsql_subject_type(self, subject_type: Tree):
+    def _as_fikl_subject_type(self, subject_type: Tree):
         """Determines the subject type that the query is referring to."""
         match subject_type.children[0].type:
             case "WITHIN":
-                return FSQLSubjectType.COLLECTION_GROUP
+                return FIKLSubjectType.COLLECTION_GROUP
             case "FROM":
-                return FSQLSubjectType.COLLECTION
+                return FIKLSubjectType.COLLECTION
             case "AT":
-                return FSQLSubjectType.DOCUMENT
+                return FIKLSubjectType.DOCUMENT
 
     def _do_select(self, subset: Tree, subject_type: Tree,
                   subject: Tree, where: Tree | None, limit: Tree | None,
-                  output: Tree | None) -> FSQLSelectQuery:
+                  output: Tree | None) -> FIKLSelectQuery:
         """
         The base method for all select queries.
         Creates the appropate definition of the select query.
         """
         return {
-            "query_type": FSQLQueryType.SELECT,
+            "query_type": FIKLQueryType.SELECT,
             "fields": self._as_fields(subset),
             "subject": self._as_value(subject),
-            "subject_type": self._as_fsql_subject_type(subject_type),
+            "subject_type": self._as_fikl_subject_type(subject_type),
             "where": self._as_where(where),
             "limit": self._as_limit(limit),
             "output": self._as_output(output)
@@ -211,9 +211,9 @@ class FSQLTree(Transformer):
         """
 
         return {
-            "query_type": FSQLQueryType.UPDATE,
+            "query_type": FIKLQueryType.UPDATE,
             "subject": self._as_value(subject),
-            "subject_type": self._as_fsql_subject_type(subject_type),
+            "subject_type": self._as_fikl_subject_type(subject_type),
             "where": self._as_where(where),
             "set": self._as_setters(setter)
         }
@@ -232,9 +232,9 @@ class FSQLTree(Transformer):
         Creates the appropate definition of the delete query.
         """
         return {
-            "query_type": FSQLQueryType.DELETE,
+            "query_type": FIKLQueryType.DELETE,
             "subject": self._as_value(subject),
-            "subject_type": self._as_fsql_subject_type(subject_type),
+            "subject_type": self._as_fikl_subject_type(subject_type),
             "where": self._as_where(where)
         }
 
@@ -249,23 +249,23 @@ class FSQLTree(Transformer):
     def show_collections(self):
         """The method for all show collections queries."""
         return {
-            "query_type": FSQLQueryType.SHOW,
+            "query_type": FIKLQueryType.SHOW,
             "subject": None,
-            "subject_type": FSQLSubjectType.COLLECTION,
+            "subject_type": FIKLSubjectType.COLLECTION,
             "where": None
         }
 
-    def insert_document(self, subject: Tree, setter: Tree, identifier: Tree) -> FSQLInsertQuery:
+    def insert_document(self, subject: Tree, setter: Tree, identifier: Tree) -> FIKLInsertQuery:
         """The method for all insert document queries."""
         return {
-            "query_type": FSQLQueryType.INSERT,
+            "query_type": FIKLQueryType.INSERT,
             "subject": self._as_value(subject),
-            "subject_type": FSQLSubjectType.COLLECTION,
+            "subject_type": FIKLSubjectType.COLLECTION,
             "set": self._as_setters(setter),
             "identifier": self._as_identifier(identifier)
         }
 
-def parse(query: str) -> FSQLQuery:
+def parse(query: str) -> FIKLQuery:
     """
     Uses Lark to parse the query against the grammar and then provides a tokenised query
     """
@@ -273,9 +273,9 @@ def parse(query: str) -> FSQLQuery:
 
         parse_tree = build_parse_tree(query)
 
-        ql_tree = FSQLTree().transform(parse_tree)
-        fsql_query: FSQLQuery = ql_tree.children[0]
-        return fsql_query
+        ql_tree = FIKLTree().transform(parse_tree)
+        fikl_query: FIKLQuery = ql_tree.children[0]
+        return fikl_query
     except Exception as err:
         raise QuerySyntaxError(err) from err
 
@@ -311,10 +311,10 @@ def resource_path(relative_path):
 
 def read_grammar():
     """
-    Reads the grammar file for the FSQL language.
+    Reads the grammar file for the FIKL language.
 
     Returns:
         str: The contents of the grammar file.
     """
-    with open(resource_path("fsql.lark"), encoding="utf-8") as file:
+    with open(resource_path("fikl.lark"), encoding="utf-8") as file:
         return file.read()

@@ -1,20 +1,20 @@
 # Firestore Query Language
 
-FSQL is a Firestore Query Languate CLI tool that allows users to execute SQL Like queries against a Firestore database.
+FIKL is a Firestore Query Languate CLI tool that allows users to execute SQL Like queries against a Firestore database.
 
 * Supports **SELECT**, **UPDATE** & **DELETE** queries
 * Full featured **REPL**
 
 <p align="center">
-  <img src="./img/fsql-screenshot.png" alt="FSQL Repl" width="738">
+  <img src="./img/fikl-screenshot.png" alt="FIKL Repl" width="738">
 </p>
 
 ## How It Works
-The FSQL CLI tool allows for SQL-like queries to be executed against a Firestore database.
+The FIKL CLI tool allows for SQL-like queries to be executed against a Firestore database.
 
 1. Firestore essentially has 3 different query contexts:
    * **Document**
-     *  Documents are fetched by specifying the path to that document. This is accomplised in FSQL by making use of the `at` keyword.
+     *  Documents are fetched by specifying the path to that document. This is accomplised in FIKL by making use of the `at` keyword.
    * **Collection**
      *  Collections contain a number of documents and are queried by making use of the `from` keyword.
    * **Collection Group**
@@ -40,28 +40,28 @@ python -m coverage run -m unittest && coverage report && coverage html
 
 4. Use `pyinstaller` to create an executable. A `dist` directory will be created which will include the executable.
 ```sh
-pyinstaller --clean -n fsql --add-data "fsql.lark:." ./lang/__main__.py
-./dist/fsql/fsql
+pyinstaller --clean -n fikl --add-data "fikl.lark:." ./lang/__main__.py
+./dist/fikl/fikl
 ```
 
 ## Usage
 
 Make sure that the `GOOGLE_APPLICATION_CREDENTIALS` environment variable is set and pointing to a Google Cloud credentials json file
 
-1. To start a FSQL REPL.
+1. To start a FIKL REPL.
 ```sh
-fsql
+fikl
 ```
 _Note: Commands can run over multiple lines in the REPL and should be terminated with a semi-colon_
 
-2. Supply a query as an argument to the fsql executable to execute a command direcly from the command prompt
+2. Supply a query as an argument to the fikl executable to execute a command direcly from the command prompt
 ```sh
-fsql 'select * from MyCollection where year == 2005 limit 5'
+fikl 'select * from MyCollection where year == 2005 limit 5'
 ```
 
 3. Similary to SQL, a list of desired fields can be specified as part of a query. If all fields are required then `*` can be provided. Dot-notation can be used to fetch properties from a nested object (remember to surround with double-quotes)
 ```sh
-fsql 'select title, "author.firstName" from MyCollection where year == 2005 limit 5'
+fikl 'select title, "author.firstName" from MyCollection where year == 2005 limit 5'
 ```
 
 ## Example Queries
