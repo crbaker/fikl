@@ -5,7 +5,6 @@ import unittest
 from lang.transformer import (parse, read_grammar, build_parse_tree,
                               FIKLQueryType, FIKLSubjectType, QuerySyntaxError)
 
-
 class TestTransformer(unittest.TestCase):
 
     def test_read_grammer(self):
@@ -15,6 +14,18 @@ class TestTransformer(unittest.TestCase):
     def test_should_build_parse_tree(self):
         tree = build_parse_tree('select * from SOME_COLLECTION')
         self.assertIsNotNone(tree)
+
+    def test_should_parse_valid_select_with_order_by(self):
+        query = parse('select * from SOME_COLLECTION order by some_field desc, last_name asc, first_name')
+
+        self.assertIsNotNone(query["order"])
+        self.assertEqual(len(query["order"]), 3)
+
+        self.assertEqual(query["order"][0]["property"], "some_field")
+        self.assertEqual(query["order"][0]["direction"], "desc")
+
+        self.assertEqual(query["order"][2]["property"], "first_name")
+        self.assertEqual(query["order"][2]["direction"], "asc")
 
     def test_should_parse_valid_select_query(self):
         query = parse('select * from SOME_COLLECTION')
@@ -53,11 +64,11 @@ class TestTransformer(unittest.TestCase):
         self.assertIsNotNone(query["where"])
         self.assertEqual(len(query["where"]), 2)
 
-        self.assertEqual(query["where"][0]["field"], "some_field")
+        self.assertEqual(query["where"][0]["property"], "some_field")
         self.assertEqual(query["where"][0]["operator"], "==")
         self.assertEqual(query["where"][0]["value"], "ABDEFG")
 
-        self.assertEqual(query["where"][1]["field"], "some_other_field")
+        self.assertEqual(query["where"][1]["property"], "some_other_field")
         self.assertEqual(query["where"][1]["operator"], "==")
         self.assertEqual(query["where"][1]["value"], 2000)
 
@@ -70,7 +81,7 @@ class TestTransformer(unittest.TestCase):
         self.assertIsNotNone(query["where"])
         self.assertEqual(len(query["where"]), 1)
 
-        self.assertEqual(query["where"][0]["field"], "some_field")
+        self.assertEqual(query["where"][0]["property"], "some_field")
         self.assertEqual(query["where"][0]["operator"], "in")
         self.assertEqual(query["where"][0]["value"], ["ABDEFG", "HIJKLNOP"])
 
@@ -104,11 +115,11 @@ class TestTransformer(unittest.TestCase):
         self.assertIsNotNone(query["where"])
         self.assertEqual(len(query["where"]), 2)
 
-        self.assertEqual(query["where"][0]["field"], "some_field")
+        self.assertEqual(query["where"][0]["property"], "some_field")
         self.assertEqual(query["where"][0]["operator"], "==")
         self.assertEqual(query["where"][0]["value"], "ABDEFG")
 
-        self.assertEqual(query["where"][1]["field"], "some_other_field")
+        self.assertEqual(query["where"][1]["property"], "some_other_field")
         self.assertEqual(query["where"][1]["operator"], "==")
         self.assertEqual(query["where"][1]["value"], 2000)
 

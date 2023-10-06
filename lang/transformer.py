@@ -33,7 +33,7 @@ class FIKLSubjectType(Enum):
 
 class FIKLWhere(TypedDict):
     """The defniition of a where clause."""
-    field: str
+    property: str
     operator: str
     value: int | float | str | list[any]
 
@@ -44,6 +44,12 @@ class FIKLQuery(TypedDict):
     subject: str | None
     subject_type: FIKLSubjectType
     where: list[FIKLWhere] | None
+
+
+class FIKLOrderBy(TypedDict):
+    """The definition of a order by that is used when selecting a Firestore record."""
+    property: str
+    direction: str | None
 
 
 class FIKLUpdateSet(TypedDict):
@@ -68,6 +74,7 @@ class FIKLSelectQuery(FIKLQuery):
     fields: list[str] | str
     limit: int | None
     output: str | None
+    order: list[FIKLOrderBy] | None
 
 
 @v_args(inline=True)
@@ -93,6 +100,10 @@ class FIKLTree(Transformer):
                 return some_tree.children[0].value
             case "NULL":
                 return None
+            case "DESC":
+                return some_tree.children[0].value
+            case "ASC":
+                return some_tree.children[0].value
             case _:
                 return ast.literal_eval(some_tree.children[0].value)
 
@@ -133,7 +144,7 @@ class FIKLTree(Transformer):
         def token_as_where(token) -> FIKLWhere:
             matching = list(token.find_data("property"))[0]
             return {
-                'field': self._as_value(matching),
+                'property': self._as_value(matching),
                 'operator': self._data_value(token, 'operator'),
                 'value': self._as_fikl_match(token)
             }
@@ -147,7 +158,7 @@ class FIKLTree(Transformer):
 
         return self._as_value(list(identifier.find_data("property"))[0])
 
-    def _as_setters(self, setter: Tree) -> FIKLUpdateSet:
+    def _as_setters(self, setter: Tree) -> list[FIKLUpdateSet]:
         """Gets the setters that are specified in the query."""
         def as_setter(token: Tree):
             matching = list(token.find_data("property"))[0]
@@ -155,7 +166,7 @@ class FIKLTree(Transformer):
                 "property": self._as_value(matching),
                 "value": self._as_value(token.children[1])
             }
-        return list(map(as_setter, list(setter.find_data("setter"))))
+        return [as_setter(token) for token in list(setter.find_data("setter"))]
 
     def _as_fields(self, select: Tree) -> list[str]:
         """Gets the fields that are specified in the query."""
@@ -165,6 +176,21 @@ class FIKLTree(Transformer):
             return values
 
         return "*"
+
+    def _as_order(self, order: Tree | None) -> list[FIKLOrderBy] | None:
+        """Gets the order by instructions for the select query"""
+        if (order is None):
+            return None
+
+        def as_order_by(token: Tree):
+            matching = list(token.find_data("property"))[0]
+            direction = list(token.find_data("direction"))
+            return {
+                "property": self._as_value(matching),
+                "direction": "asc" if len(direction) == 0 else self._as_value(direction[0])
+            }
+
+        return [as_order_by(token) for token in list(order.find_data("sorter"))]
 
     def _as_fikl_subject_type(self, subject_type: Tree):
         """Determines the subject type that the query is referring to."""
@@ -177,8 +203,8 @@ class FIKLTree(Transformer):
                 return FIKLSubjectType.DOCUMENT
 
     def _do_select(self, subset: Tree, subject_type: Tree,
-                  subject: Tree, where: Tree | None, limit: Tree | None,
-                  output: Tree | None) -> FIKLSelectQuery:
+                   subject: Tree, where: Tree | None, order: Tree | None,
+                   limit: Tree | None, output: Tree | None) -> FIKLSelectQuery:
         """
         The base method for all select queries.
         Creates the appropate definition of the select query.
@@ -190,19 +216,20 @@ class FIKLTree(Transformer):
             "subject_type": self._as_fikl_subject_type(subject_type),
             "where": self._as_where(where),
             "limit": self._as_limit(limit),
+            "order": self._as_order(order),
             "output": self._as_output(output)
         }
 
     def select_collection(self, subset: Tree, subject_type: Tree,
-                          subject: Tree, where: Tree | None, limit: Tree | None,
-                          output: Tree | None):
+                          subject: Tree, where: Tree | None, order: Tree,
+                          limit: Tree | None, output: Tree | None):
         """The method for all select collection queries."""
-        return self._do_select(subset, subject_type, subject, where, limit, output)
+        return self._do_select(subset, subject_type, subject, where, order, limit, output)
 
     def select_document(self, subset: Tree, subject_type: Tree,
                         subject: Tree, output: Tree | None):
         """The method for all select document queries."""
-        return self._do_select(subset, subject_type, subject, where=None, limit=None, output=output)
+        return self._do_select(subset, subject_type, subject, where=None, order=None, limit=None, output=output)
 
     def _do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
         """
@@ -264,6 +291,7 @@ class FIKLTree(Transformer):
             "set": self._as_setters(setter),
             "identifier": self._as_identifier(identifier)
         }
+
 
 def parse(query: str) -> FIKLQuery:
     """

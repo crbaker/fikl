@@ -1,6 +1,6 @@
 start: instruction
 
-instruction: "select" subset collection_type subject [where] [limit] [output] -> select_collection
+instruction: "select" subset collection_type subject [where] [order] [limit] [output] -> select_collection
     | "select" subset document_type subject [output] -> select_document
 
     | "update" collection_type subject "set" set where  -> update_collection
@@ -16,9 +16,14 @@ instruction: "select" subset collection_type subject [where] [limit] [output] ->
 where: "where" comparrison ("and" comparrison)*
 comparrison: property operator matching
 
+order: "order" "by" sorter ("," sorter)*
+sorter: property [direction]
+
 matching: (literal | array)
 
 limit: "limit" SIGNED_NUMBER
+
+direction: ASC | DESC
 
 subset: (all | fields)
 all: ALL
@@ -37,8 +42,12 @@ array: "[" literal ("," literal)* "]"
 
 output: "output" ESCAPED_STRING
 
+ASC: "asc"
+DESC: "desc"
+
 ALL: "*"
 
+ORDER: "order"
 IDENTIFIED: "identified"
 BY: "by"
 

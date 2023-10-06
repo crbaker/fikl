@@ -68,7 +68,7 @@ def start_repl():
 
     while go_again:
 
-        if current_query is None:
+        if current_query is None or current_query.strip() == "":
             current_query = input('> ').strip()
         else:
             current_query = f"{current_query} {input(': ')}".strip()

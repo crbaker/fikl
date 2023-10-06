@@ -104,6 +104,12 @@ _Remember that Firestore requires explicit indexes when filtering by more than o
 select * from SOME_COLLECTION where year == 2005 and "author.lastName" == "Diamond" limit 10
 ```
 
+#### Use an order by clause to sort what is returned.
+_Remember that Firestore requires explicit indexes when filtering or sorting by more than one property_:
+```sql
+select * from SOME_COLLECTION where year == 2005 and "author.lastName" == "Diamond" order by year desc, title limit 10
+```
+
 #### Update documents in a collection
 A `where` clause is mandatory when updating documents in a collection or collection group:
 ```sql

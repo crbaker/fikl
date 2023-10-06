@@ -180,6 +180,23 @@ def snapshot_to_document_fn(fikl_query: FIKLQuery):
     return extract_fields_from_snapshot
 
 
+def add_order_by_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestore.Query:
+    """
+    Adds the order by clauses to the query.
+
+    Returns:
+        firestore.Query: The query with the order by clauses added.
+    """
+    if fikl_query["order"] is not None:
+        for order in fikl_query["order"]:
+            direction = "ASCENDING" if order["direction"] == "asc" else "DESCENDING"
+            query = query.order_by(
+                order["property"], direction=direction)
+        return query
+
+    return query
+
+
 def add_where_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestore.Query:
     """
     Adds the where clauses to the query.
@@ -190,7 +207,7 @@ def add_where_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestor
     if fikl_query["where"] is not None:
         for where in fikl_query["where"]:
             field_filter = FieldFilter(
-                where["field"], where["operator"], where["value"])
+                where["property"], where["operator"], where["value"])
             query = query.where(filter=field_filter)
         return query
 
@@ -319,6 +336,8 @@ def execute_select_query(fikl_query: FIKLSelectQuery) -> list[firestore.Document
 
     def execute_collection_query(query: firestore.Query) -> list[firestore.DocumentSnapshot]:
         query = add_where_clauses(query, fikl_query)
+        query = add_order_by_clauses(query, fikl_query)
+
         if "limit" in fikl_query and fikl_query["limit"] is not None:
             query = query.limit(fikl_query["limit"])
 
