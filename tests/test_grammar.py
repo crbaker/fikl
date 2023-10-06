@@ -88,7 +88,7 @@ class TestTransformer(unittest.TestCase):
     def test_should_parse_valid_document_update(self):
         query = parse("""
             update at "SOME_COLLECTION/DOC_ID"
-                      set some_field = "ABC", some_other_field = 2000, some_nullable_field = null
+                      set some_field = "ABC", "some_other_field.nested" = 2000, some_nullable_field = null
         """)
         self.assertEqual(query["query_type"], FIKLQueryType.UPDATE)
         self.assertEqual(query["subject_type"], FIKLSubjectType.DOCUMENT)
@@ -99,7 +99,7 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(query["set"][0]["property"], "some_field")
         self.assertEqual(query["set"][0]["value"], "ABC")
 
-        self.assertEqual(query["set"][1]["property"], "some_other_field")
+        self.assertEqual(query["set"][1]["property"], "some_other_field.nested")
         self.assertEqual(query["set"][1]["value"], 2000)
 
         self.assertEqual(query["set"][2]["property"], "some_nullable_field")

@@ -179,7 +179,7 @@ class FIKLTree(Transformer):
 
     def _as_order(self, order: Tree | None) -> list[FIKLOrderBy] | None:
         """Gets the order by instructions for the select query"""
-        if (order is None):
+        if order is None:
             return None
 
         def as_order_by(token: Tree):
@@ -229,7 +229,8 @@ class FIKLTree(Transformer):
     def select_document(self, subset: Tree, subject_type: Tree,
                         subject: Tree, output: Tree | None):
         """The method for all select document queries."""
-        return self._do_select(subset, subject_type, subject, where=None, order=None, limit=None, output=output)
+        return self._do_select(subset, subject_type, subject,
+                               where=None, order=None, limit=None, output=output)
 
     def _do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
         """

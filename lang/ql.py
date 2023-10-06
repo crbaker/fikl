@@ -187,7 +187,7 @@ def add_order_by_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> fires
     Returns:
         firestore.Query: The query with the order by clauses added.
     """
-    if fikl_query["order"] is not None:
+    if "order" in fikl_query and fikl_query["order"] is not None:
         for order in fikl_query["order"]:
             direction = "ASCENDING" if order["direction"] == "asc" else "DESCENDING"
             query = query.order_by(
@@ -276,13 +276,9 @@ def execute_update_query(fikl_query: FIKLUpdateQuery) -> int:
     count = 0
     new_values = merge_setters(fikl_query["set"])
 
-    dicts = [expand_key({}, key, value)
-             for key, value in new_values.items()]
-    merged_dict = merge_dicts(dicts)
-
     for doc in docs:
         try:
-            doc.reference.update(merged_dict)
+            doc.reference.update(new_values)
             count += 1
         except Exception:
             pass
