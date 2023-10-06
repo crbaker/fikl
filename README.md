@@ -40,7 +40,7 @@ python -m coverage run -m unittest && coverage report && coverage html
 
 4. Use `pyinstaller` to create an executable. A `dist` directory will be created which will include the executable.
 ```sh
-pyinstaller --clean -n fikl --add-data "fikl.lark:." ./lang/__main__.py
+pyinstaller --clean -y -n fikl --add-data "fikl.lark:." ./lang/__main__.py
 ./dist/fikl/fikl
 ```
 
