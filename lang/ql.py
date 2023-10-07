@@ -1,16 +1,23 @@
 """This module provides the fikl query details."""
+# pylint: disable=too-many-return-statements
 # lang/ql.py
 import json
+from operator import itemgetter as i
+from functools import cmp_to_key
 import os
 
 from collections import defaultdict
+from collections.abc import MutableMapping
 
+import pydash
 
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from lang.transformer import (FIKLQuery,
                               FIKLQueryType,
+                              FIKLWhere,
+                              FIKLOrderBy,
                               FIKLSelectQuery,
                               FIKLInsertQuery,
                               FIKLSubjectType,
@@ -81,6 +88,18 @@ def merge_setters(dicts: list[dict]) -> dict:
     for setter in dicts:
         result.update({setter["property"]: setter["value"]})
     return result
+
+
+def flatten(dictionary, parent_key="", separator="."):
+    """Flattens a nested dictionary"""
+    items = []
+    for key, value in dictionary.items():
+        new_key = parent_key + separator + key if parent_key else key
+        if isinstance(value, MutableMapping):
+            items.extend(flatten(value, new_key, separator=separator).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)
 
 
 def expand_key(dictionary: dict, key: str, value) -> dict:
@@ -188,7 +207,9 @@ def add_order_by_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> fires
         firestore.Query: The query with the order by clauses added.
     """
     if "order" in fikl_query and fikl_query["order"] is not None:
-        for order in fikl_query["order"]:
+        remote_orders = [where for where in fikl_query["order"]
+                         if where["local"] is False]
+        for order in remote_orders:
             direction = "ASCENDING" if order["direction"] == "asc" else "DESCENDING"
             query = query.order_by(
                 order["property"], direction=direction)
@@ -205,9 +226,12 @@ def add_where_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestor
         firestore.Query: The query with the where clauses added.
     """
     if fikl_query["where"] is not None:
-        for where in fikl_query["where"]:
+        remote_wheres = [where for where in fikl_query["where"]
+                         if where["local"] is False]
+        for where in remote_wheres:
+            corrected_operator = "not-in" if where["operator"] == "not_in" else where["operator"]
             field_filter = FieldFilter(
-                where["property"], where["operator"], where["value"])
+                where["property"], corrected_operator, where["value"])
             query = query.where(filter=field_filter)
         return query
 
@@ -321,6 +345,96 @@ def execute_show_query(_: FIKLSelectQuery) -> list[str]:
     return collections
 
 
+def local_compare(document: dict, prop: str, where: FIKLWhere) -> bool:
+    """
+    Compares the provided value with the provided filter.
+    """
+    if prop not in document:
+        return False
+
+    value = document[prop]
+    match where['operator']:
+        case ">":
+            return value > where['value']
+        case ">=":
+            return value >= where['value']
+        case "<":
+            return value < where['value']
+        case "<=":
+            return value <= where['value']
+        case "!=":
+            return value != where['value']
+        case "==":
+            return value == where['value']
+        case "in":
+            return value in where['value']
+        case "not_in":
+            return value not in where['value']
+        case "array_contains":
+            return where['value'] in value
+        case "array_contains_any":
+            return pydash.every(where['value'], lambda v: v in value)
+
+    return False
+
+
+def includes(document: dict, local_filters: list[FIKLWhere]) -> bool:
+    """
+    Determines if the provided document should be included in the results.
+    """
+    flat_dict = flatten(document)
+    return pydash.every(local_filters,
+                        lambda where: local_compare(flat_dict, where["property"], where))
+
+
+def filter_locally(records: list[firestore.DocumentSnapshot], fikl_query: FIKLSelectQuery):
+    """Filters the list of records locally."""
+    if fikl_query["where"] is not None:
+        local_wheres = [
+            where for where in fikl_query["where"] if where["local"] is True]
+        return [doc for doc in records if includes(doc.to_dict(), local_wheres)]
+
+    return records
+
+
+def cmp(left, right):
+    """Polyfill for cmp function."""
+    return (left > right) - (left < right)
+
+
+def multikeysort(items, columns):
+    """Sorts the provided list of items by the provided list of columns."""
+    comparers = [
+        ((i(col[1:].strip()), -1) if col.startswith('-')
+         else (i(col.strip()), 1))
+        for col in columns
+    ]
+
+    def comparer(left: firestore.DocumentSnapshot, right: firestore.DocumentSnapshot):
+        left_dict = left.to_dict()
+        right_dict = right.to_dict()
+        comparer_iter = (
+            cmp(fn(left_dict), fn(right_dict)) * mult
+            for fn, mult in comparers
+        )
+        return next((result for result in comparer_iter if result), 0)
+    return sorted(items, key=cmp_to_key(comparer))
+
+
+def order_by_as_sort_column(order_by: FIKLOrderBy) -> str:
+    """Creates a new sort column from the provided order by clause."""
+    return order_by["property"] if order_by["direction"] == "asc" else f"-{order_by['property']}"
+
+
+def sort_locally(records: list[firestore.DocumentSnapshot], fikl_query: FIKLSelectQuery):
+    """Sorts the list of records locally."""
+    if "order" in fikl_query and fikl_query["order"] is not None:
+        sorters = [order_by_as_sort_column(order_by)
+                   for order_by in fikl_query["order"]]
+        return multikeysort(records, sorters)
+    return records
+
+
 def execute_select_query(fikl_query: FIKLSelectQuery) -> list[firestore.DocumentSnapshot]:
     """
     Executes a select query against the Firestore database.
@@ -337,7 +451,7 @@ def execute_select_query(fikl_query: FIKLSelectQuery) -> list[firestore.Document
         if "limit" in fikl_query and fikl_query["limit"] is not None:
             query = query.limit(fikl_query["limit"])
 
-        return query.get()
+        return sort_locally(filter_locally(query.get(), fikl_query), fikl_query)
 
     match fikl_query["subject_type"]:
         case FIKLSubjectType.COLLECTION_GROUP:

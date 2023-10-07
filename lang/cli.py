@@ -24,7 +24,7 @@ def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] 
     """
     try:
         if (env_var := 'GOOGLE_APPLICATION_CREDENTIALS') not in os.environ:
-            rprint(f"""[italic yellow]Warning: ${env_var} is not set[/italic yellow]""")
+            rprint(f"""[italic yellow]Warning: {env_var} is not set[/italic yellow]""")
 
         if query_text is None:
             start_repl()

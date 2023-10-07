@@ -36,6 +36,7 @@ class FIKLWhere(TypedDict):
     property: str
     operator: str
     value: int | float | str | list[any]
+    local: bool
 
 
 class FIKLQuery(TypedDict):
@@ -50,6 +51,7 @@ class FIKLOrderBy(TypedDict):
     """The definition of a order by that is used when selecting a Firestore record."""
     property: str
     direction: str | None
+    local: bool
 
 
 class FIKLUpdateSet(TypedDict):
@@ -107,16 +109,19 @@ class FIKLTree(Transformer):
             case _:
                 return ast.literal_eval(some_tree.children[0].value)
 
-    def _as_fikl_match(self, where: Tree) -> AllTypes | list[AllTypes] | None:
+    def _as_fikl_match(self, tree: Tree, prop: str) -> AllTypes | list[AllTypes] | None:
         """
         Gets the value of a match node.
         Depending on the type of the node, the Python AST will be invoked to
         convert the value to the appropriate type.
         """
-        matching = list(where.find_data('matching'))[0].children[0]
+        matching = list(tree.find_data(prop))[0].children[0]
 
         if matching.data == 'literal':
-            return ast.literal_eval(self._data_value(matching, "literal"))
+            if (value := self._data_value(matching, 'literal')) == 'null':
+                return None
+
+            return ast.literal_eval(value)
 
         if matching.data == "array":
             return [ast.literal_eval(token.children[0].value)
@@ -143,10 +148,12 @@ class FIKLTree(Transformer):
 
         def token_as_where(token) -> FIKLWhere:
             matching = list(token.find_data("property"))[0]
+            use_local = len(list(token.find_data("local"))) > 0
             return {
                 'property': self._as_value(matching),
-                'operator': self._data_value(token, 'operator'),
-                'value': self._as_fikl_match(token)
+                'operator': self._data_value(token, "operator"),
+                'value': self._as_fikl_match(token, "matching"),
+                'local': use_local
             }
 
         return [token_as_where(token) for token in list(where.find_data("comparrison"))]
@@ -164,7 +171,7 @@ class FIKLTree(Transformer):
             matching = list(token.find_data("property"))[0]
             return {
                 "property": self._as_value(matching),
-                "value": self._as_value(token.children[1])
+                "value": self._as_fikl_match(token, "matching")
             }
         return [as_setter(token) for token in list(setter.find_data("setter"))]
 
@@ -185,9 +192,12 @@ class FIKLTree(Transformer):
         def as_order_by(token: Tree):
             matching = list(token.find_data("property"))[0]
             direction = list(token.find_data("direction"))
+            use_local = len(list(token.find_data("local"))) > 0
+
             return {
                 "property": self._as_value(matching),
-                "direction": "asc" if len(direction) == 0 else self._as_value(direction[0])
+                "direction": "asc" if len(direction) == 0 else self._as_value(direction[0]),
+                "local": use_local
             }
 
         return [as_order_by(token) for token in list(order.find_data("sorter"))]

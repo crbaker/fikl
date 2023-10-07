@@ -14,10 +14,12 @@ instruction: "select" subset collection_type subject [where] [order] [limit] [ou
     | "show" "collections" -> show_collections
 
 where: "where" comparrison ("and" comparrison)*
-comparrison: property operator matching
+comparrison: property[local] operator matching
+
+local: LOCAL
 
 order: "order" "by" sorter ("," sorter)*
-sorter: property [direction]
+sorter: property[local] [direction]
 
 matching: (literal | array)
 
@@ -30,7 +32,7 @@ all: ALL
 fields: property ("," property)*
 
 set: setter ("," setter)*
-setter: property "=" literal
+setter: property "=" matching
 
 id: IDENTIFIED BY property
 
@@ -41,6 +43,8 @@ literal: ESCAPED_STRING | NUMBER | SIGNED_NUMBER | NULL
 array: "[" literal ("," literal)* "]"
 
 output: "output" ESCAPED_STRING
+
+LOCAL: "^"
 
 ASC: "asc"
 DESC: "desc"
@@ -68,7 +72,7 @@ LESSER_EQUAL: "<="
 NOT: "!="
 EQUAL: "=="
 IN: "in"
-NOT_IN: "not-in"
+NOT_IN: "not_in"
 ARRAY_CONTAINS: "array_contains"
 ARRAY_CONTAINS_ANY: "array_contains_any"
 

@@ -105,6 +105,18 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(query["set"][2]["property"], "some_nullable_field")
         self.assertEqual(query["set"][2]["value"], None)
 
+
+    def test_should_parse_valid_update_with_local_where_query(self):
+        query = parse("""
+            select * from SOME_COLLECTION
+                      where some_field == "ABDEFG" and "and.another.some_other_field"^ == 2000 order by some_strange_field^ desc
+        """)
+
+        self.assertFalse(query["where"][0]["local"])
+        self.assertTrue(query["where"][1]["local"])
+
+        self.assertTrue(query["order"][0]["local"])
+
     def test_should_parse_valid_update_with_limit_and_where_query(self):
         query = parse("""
             update from SOME_COLLECTION
