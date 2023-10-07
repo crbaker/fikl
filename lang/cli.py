@@ -39,7 +39,6 @@ def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] 
 
 def configure_firebase():
     """ Configures the Firebase SDK. """
-    rprint("Configuring Firebase")
     firebase_admin.initialize_app()
 
 def run_query_and_output(query_text):
