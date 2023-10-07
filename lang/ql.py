@@ -11,7 +11,8 @@ from collections.abc import MutableMapping
 
 import pydash
 
-from google.cloud import firestore
+from firebase_admin import firestore as fs
+
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from lang.transformer import (FIKLQuery,
@@ -176,15 +177,15 @@ def object_exists(obj: dict) -> bool:
 
 def snapshot_to_document_fn(fikl_query: FIKLQuery):
     """
-    Creates a function that can be used to convert a firestore.DocumentSnapshot to a dictionary.
+    Creates a function that can be used to convert a DocumentSnapshot to a dictionary.
     This function will also reduce the returned fields to only those requested in the query.
 
     Returns:
-        The function that can be called to convert a firestore.DocumentSnapshot to a dictionary.
+        The function that can be called to convert a DocumentSnapshot to a dictionary.
     """
     requested_fields = fikl_query["fields"] if "fields" in fikl_query else "*"
 
-    def extract_fields_from_snapshot(response: firestore.DocumentSnapshot | str):
+    def extract_fields_from_snapshot(response: fs.firestore.DocumentSnapshot | str):
         if isinstance(response, str):
             return response
 
@@ -199,7 +200,8 @@ def snapshot_to_document_fn(fikl_query: FIKLQuery):
     return extract_fields_from_snapshot
 
 
-def add_order_by_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestore.Query:
+def add_order_by_clauses(query: fs.firestore.Query,
+                         fikl_query: FIKLQuery) -> fs.firestore.Query:
     """
     Adds the order by clauses to the query.
 
@@ -218,7 +220,8 @@ def add_order_by_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> fires
     return query
 
 
-def add_where_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestore.Query:
+def add_where_clauses(query: fs.firestore.Query,
+                      fikl_query: FIKLQuery) -> fs.firestore.Query:
     """
     Adds the where clauses to the query.
 
@@ -238,7 +241,7 @@ def add_where_clauses(query: firestore.Query, fikl_query: FIKLQuery) -> firestor
     return query
 
 
-def execute_query(fikl_query: FIKLQuery) -> list[firestore.DocumentSnapshot] | int:
+def execute_query(fikl_query: FIKLQuery) -> list[fs.firestore.DocumentSnapshot] | int:
     """
     Determines the appropraite query function to execute based on the query type.
 
@@ -323,7 +326,8 @@ def execute_insert_query(fikl_query: FIKLInsertQuery) -> int:
              for key, value in new_values.items()]
     merged_dict = merge_dicts(dicts)
 
-    client = firestore.Client()
+    client = fs.client()
+
     client.collection(fikl_query["subject"]).add(
         merged_dict, document_id=fikl_query["identifier"])
     return 1
@@ -336,7 +340,7 @@ def execute_show_query(_: FIKLSelectQuery) -> list[str]:
     Returns:
         list[str]: A list of collections names.
     """
-    client = firestore.Client()
+    client = fs.client()
 
     collections = []
     for coll in client.collections():
@@ -387,7 +391,8 @@ def includes(document: dict, local_filters: list[FIKLWhere]) -> bool:
                         lambda where: local_compare(flat_dict, where["property"], where))
 
 
-def filter_locally(records: list[firestore.DocumentSnapshot], fikl_query: FIKLSelectQuery):
+def filter_locally(records: list[fs.firestore.DocumentSnapshot],
+                   fikl_query: FIKLSelectQuery):
     """Filters the list of records locally."""
     if fikl_query["where"] is not None:
         local_wheres = [
@@ -410,7 +415,8 @@ def multikeysort(items, columns):
         for col in columns
     ]
 
-    def comparer(left: firestore.DocumentSnapshot, right: firestore.DocumentSnapshot):
+    def comparer(left: fs.firestore.DocumentSnapshot,
+                 right: fs.firestore.DocumentSnapshot):
         left_dict = left.to_dict()
         right_dict = right.to_dict()
         comparer_iter = (
@@ -426,7 +432,7 @@ def order_by_as_sort_column(order_by: FIKLOrderBy) -> str:
     return order_by["property"] if order_by["direction"] == "asc" else f"-{order_by['property']}"
 
 
-def sort_locally(records: list[firestore.DocumentSnapshot], fikl_query: FIKLSelectQuery):
+def sort_locally(records: list[fs.firestore.DocumentSnapshot], fikl_query: FIKLSelectQuery):
     """Sorts the list of records locally."""
     if "order" in fikl_query and fikl_query["order"] is not None:
         sorters = [order_by_as_sort_column(order_by)
@@ -435,16 +441,17 @@ def sort_locally(records: list[firestore.DocumentSnapshot], fikl_query: FIKLSele
     return records
 
 
-def execute_select_query(fikl_query: FIKLSelectQuery) -> list[firestore.DocumentSnapshot]:
+def execute_select_query(fikl_query: FIKLSelectQuery) -> list[fs.firestore.DocumentSnapshot]:
     """
     Executes a select query against the Firestore database.
 
     Returns:
         list: A list of documents that match the query.
     """
-    client = firestore.Client()
 
-    def execute_collection_query(query: firestore.Query) -> list[firestore.DocumentSnapshot]:
+    client = fs.client()
+
+    def execute_collection_query(query: fs.firestore.Query) -> list[fs.firestore.DocumentSnapshot]:
         query = add_where_clauses(query, fikl_query)
         query = add_order_by_clauses(query, fikl_query)
 

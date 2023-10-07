@@ -7,6 +7,8 @@ import atexit
 import readline
 import json
 
+import firebase_admin
+
 import typer
 from typing_extensions import Annotated
 from rich import print as rprint, print_json
@@ -26,6 +28,8 @@ def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] 
         if (env_var := 'GOOGLE_APPLICATION_CREDENTIALS') not in os.environ:
             rprint(f"""[italic yellow]Warning: {env_var} is not set[/italic yellow]""")
 
+        configure_firebase()
+
         if query_text is None:
             start_repl()
         else:
@@ -33,6 +37,10 @@ def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] 
     except ql.QueryError as exception:
         typer.echo(exception)
 
+def configure_firebase():
+    """ Configures the Firebase SDK. """
+    rprint("Configuring Firebase")
+    firebase_admin.initialize_app()
 
 def run_query_and_output(query_text):
     """
