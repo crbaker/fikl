@@ -1,6 +1,6 @@
 start: instruction
 
-instruction: "select" subset collection_type subject [where] [order] [limit] [output] -> select_collection
+instruction: "select" [function] subset collection_type subject [where] [order] [limit] [output] -> select_collection
     | "select" subset document_type subject [output] -> select_document
 
     | "update" collection_type subject "set" set where  -> update_collection
@@ -17,6 +17,8 @@ where: "where" comparrison ("and" comparrison)*
 comparrison: property[local] operator matching
 
 local: LOCAL
+
+function: DISTINCT | COUNT | SUM | AVG | MIN | MAX
 
 order: "order" "by" sorter ("," sorter)*
 sorter: property[local] [direction]
@@ -35,6 +37,13 @@ set: setter ("," setter)*
 setter: property "=" matching
 
 id: IDENTIFIED BY property
+
+DISTINCT: "distinct"
+COUNT: "count"
+SUM: "sum"
+AVG: "avg"
+MIN: "min"
+MAX: "max"
 
 property: ESCAPED_STRING | CNAME
 subject: ESCAPED_STRING | CNAME

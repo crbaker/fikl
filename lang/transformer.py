@@ -77,6 +77,7 @@ class FIKLSelectQuery(FIKLQuery):
     limit: int | None
     output: str | None
     order: list[FIKLOrderBy] | None
+    function: str | None
 
 
 @v_args(inline=True)
@@ -140,6 +141,12 @@ class FIKLTree(Transformer):
         if output is None:
             return None
         return self._as_value(output)
+
+    def _as_function(self, function: Tree | None) -> str | None:
+        """Gets the function value that is specified in the query."""
+        if function is None:
+            return None
+        return self._data_value(function, "function")
 
     def _as_where(self, where: Tree | None) -> list[FIKLWhere] | None:
         """Gets the where clause that is specified in the query."""
@@ -212,7 +219,7 @@ class FIKLTree(Transformer):
             case "AT":
                 return FIKLSubjectType.DOCUMENT
 
-    def _do_select(self, subset: Tree, subject_type: Tree,
+    def _do_select(self, function: Tree | None, subset: Tree, subject_type: Tree,
                    subject: Tree, where: Tree | None, order: Tree | None,
                    limit: Tree | None, output: Tree | None) -> FIKLSelectQuery:
         """
@@ -227,19 +234,20 @@ class FIKLTree(Transformer):
             "where": self._as_where(where),
             "limit": self._as_limit(limit),
             "order": self._as_order(order),
-            "output": self._as_output(output)
+            "output": self._as_output(output),
+            "function": self._as_function(function)
         }
 
-    def select_collection(self, subset: Tree, subject_type: Tree,
+    def select_collection(self, function: Tree | None, subset: Tree, subject_type: Tree,
                           subject: Tree, where: Tree | None, order: Tree,
                           limit: Tree | None, output: Tree | None):
         """The method for all select collection queries."""
-        return self._do_select(subset, subject_type, subject, where, order, limit, output)
+        return self._do_select(function, subset, subject_type, subject, where, order, limit, output)
 
     def select_document(self, subset: Tree, subject_type: Tree,
                         subject: Tree, output: Tree | None):
         """The method for all select document queries."""
-        return self._do_select(subset, subject_type, subject,
+        return self._do_select(None, subset, subject_type, subject,
                                where=None, order=None, limit=None, output=output)
 
     def _do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):

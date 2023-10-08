@@ -62,12 +62,23 @@ def run_query(query: str) -> list[dict] | dict:
                 documents, indent=2), fikl_query["output"])
             return {"count": len(documents), "file": saved_to_path}
 
-        return documents
+        function = function_for_query(fikl_query)
+        return function(documents)
     except QueryError:
         raise
     except Exception as exception:
         raise QueryError(exception) from exception
 
+def function_for_query(fikl_query: FIKLSelectQuery):
+    """Determines the appropriate function to use for the query results."""
+    if "function" in fikl_query:
+        match fikl_query["function"]:
+            case "count":
+                return len
+            case "distinct":
+                return pydash.uniq
+            case _:
+                return lambda x: x
 
 def output_json_to_file(json_output: str, path: str):
     """ Writes the provided json to the provided path."""

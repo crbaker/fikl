@@ -15,6 +15,10 @@ class TestTransformer(unittest.TestCase):
         tree = build_parse_tree('select * from SOME_COLLECTION')
         self.assertIsNotNone(tree)
 
+    def test_should_parse_valid_select_with_discint(self):
+        query = parse('select count * from SOME_COLLECTION')
+        self.assertEqual(query["function"], "count")
+
     def test_should_parse_valid_select_with_order_by(self):
         query = parse('select * from SOME_COLLECTION order by some_field desc, last_name asc, first_name')
 
@@ -163,6 +167,7 @@ class TestTransformer(unittest.TestCase):
 
     def test_should_parse_valid_select_on_document(self):
         query = parse('select * at "SOME_COLLECTION/DOC_ID"')
+
         self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
         self.assertEqual(query["fields"], "*")
         self.assertEqual(query["subject_type"],
