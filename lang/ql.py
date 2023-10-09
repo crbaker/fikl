@@ -62,13 +62,21 @@ def run_query(query: str) -> list[dict] | dict:
                 documents, indent=2), fikl_query["output"])
             return {"count": len(documents), "file": saved_to_path}
 
+        grouped_results = do_group_by(documents, fikl_query)
+
         function = function_for_query(fikl_query)
-        return function(documents)
+        return function(grouped_results)
     except QueryError:
         raise
     except Exception as exception:
         raise QueryError(exception) from exception
 
+def do_group_by(records, fikl_query: FIKLSelectQuery):
+    """Groups records by the provided group property."""
+    if "group" in fikl_query and fikl_query["group"]:
+        return pydash.group_by(records, fikl_query["group"])
+
+    return records
 
 def function_for_query(fikl_query: FIKLSelectQuery):
     """Determines the appropriate function to use for the query results."""

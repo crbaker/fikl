@@ -1,6 +1,6 @@
 start: instruction
 
-instruction: "select" [function] subset collection_type subject [where] [order] [limit] [output] -> select_collection
+instruction: "select" [function] subset collection_type subject [where] [order] [limit] [group] [output] -> select_collection
     | "select" subset document_type subject [output] -> select_document
 
     | "update" collection_type subject "set" set where  -> update_collection
@@ -22,6 +22,8 @@ function: DISTINCT | COUNT | SUM | AVG | MIN | MAX
 
 order: "order" "by" sorter ("," sorter)*
 sorter: property[local] [direction]
+
+group: "group" "by" property
 
 matching: (literal | array)
 
