@@ -69,16 +69,19 @@ def run_query(query: str) -> list[dict] | dict:
     except Exception as exception:
         raise QueryError(exception) from exception
 
+
 def function_for_query(fikl_query: FIKLSelectQuery):
     """Determines the appropriate function to use for the query results."""
+
     if "function" in fikl_query:
         match fikl_query["function"]:
             case "count":
                 return len
             case "distinct":
                 return pydash.uniq
-            case _:
-                return lambda x: x
+
+    return lambda x: x
+
 
 def output_json_to_file(json_output: str, path: str):
     """ Writes the provided json to the provided path."""
@@ -344,7 +347,7 @@ def execute_insert_query(fikl_query: FIKLInsertQuery) -> int:
     return 1
 
 
-def execute_show_query(_: FIKLSelectQuery) -> list[str]:
+def execute_show_query(fikl_query: FIKLSelectQuery) -> list[str]:
     """
     Fetches the list of root level collections from the Firestore database.
 
@@ -352,12 +355,14 @@ def execute_show_query(_: FIKLSelectQuery) -> list[str]:
         list[str]: A list of collections names.
     """
     client = fs.client()
+    colls = []
 
-    collections = []
-    for coll in client.collections():
-        collections.append(coll.id)
+    collections_fn = client.collections if fikl_query["subject"] is None else client.document(
+        fikl_query["subject"]).collections
 
-    return collections
+    for coll in collections_fn():
+        colls.append(coll.id)
+    return colls
 
 
 def local_compare(document: dict, prop: str, where: FIKLWhere) -> bool:

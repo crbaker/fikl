@@ -179,7 +179,7 @@ class TestTransformer(unittest.TestCase):
     def test_should_parse_valid_show_query(self):
         query = parse('show collections')
         self.assertEqual(query["query_type"], FIKLQueryType.SHOW)
-        self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
+        self.assertEqual(query["subject_type"], FIKLSubjectType.DOCUMENT)
 
     def test_should_parse_valid_delete_query(self):
         query = parse('delete from COLLECTION where some_field == 2000')

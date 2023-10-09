@@ -11,7 +11,7 @@ instruction: "select" [function] subset collection_type subject [where] [order] 
 
     | "insert" "into" subject "set" set [id] -> insert_document
 
-    | "show" "collections" -> show_collections
+    | "show" "collections" [document_type subject] -> show_collections
 
 where: "where" comparrison ("and" comparrison)*
 comparrison: property[local] operator matching

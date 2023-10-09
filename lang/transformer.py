@@ -209,7 +209,7 @@ class FIKLTree(Transformer):
 
         return [as_order_by(token) for token in list(order.find_data("sorter"))]
 
-    def _as_fikl_subject_type(self, subject_type: Tree):
+    def _as_subject_type(self, subject_type: Tree):
         """Determines the subject type that the query is referring to."""
         match subject_type.children[0].type:
             case "WITHIN":
@@ -230,7 +230,7 @@ class FIKLTree(Transformer):
             "query_type": FIKLQueryType.SELECT,
             "fields": self._as_fields(subset),
             "subject": self._as_value(subject),
-            "subject_type": self._as_fikl_subject_type(subject_type),
+            "subject_type": self._as_subject_type(subject_type),
             "where": self._as_where(where),
             "limit": self._as_limit(limit),
             "order": self._as_order(order),
@@ -259,7 +259,7 @@ class FIKLTree(Transformer):
         return {
             "query_type": FIKLQueryType.UPDATE,
             "subject": self._as_value(subject),
-            "subject_type": self._as_fikl_subject_type(subject_type),
+            "subject_type": self._as_subject_type(subject_type),
             "where": self._as_where(where),
             "set": self._as_setters(setter)
         }
@@ -280,7 +280,7 @@ class FIKLTree(Transformer):
         return {
             "query_type": FIKLQueryType.DELETE,
             "subject": self._as_value(subject),
-            "subject_type": self._as_fikl_subject_type(subject_type),
+            "subject_type": self._as_subject_type(subject_type),
             "where": self._as_where(where)
         }
 
@@ -292,12 +292,14 @@ class FIKLTree(Transformer):
         """The method for all delete document queries."""
         return self._do_delete(subject_type, subject, where=None)
 
-    def show_collections(self):
+    def show_collections(self, subject_type: Tree | None, subject: Tree | None):
         """The method for all show collections queries."""
+        has_type = subject_type is not None
+        subject_type = self._as_subject_type(subject_type) if has_type else FIKLSubjectType.DOCUMENT
         return {
             "query_type": FIKLQueryType.SHOW,
-            "subject": None,
-            "subject_type": FIKLSubjectType.COLLECTION,
+            "subject": None if subject is None else self._as_value(subject),
+            "subject_type": subject_type,
             "where": None
         }
 
