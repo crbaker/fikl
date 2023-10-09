@@ -70,6 +70,7 @@ def start_repl():
     readline.parse_and_bind("set editing-mode vi")
 
     rprint("[italic pink]FIKL Repl[/italic pink] :fire:")
+    rprint("[italic blue]type `exit` to quit[/italic blue]")
 
     current_query: str = None
 
