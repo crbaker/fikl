@@ -1,13 +1,15 @@
 # Firestore Query Language
 
-FIKL is a Firestore Query Languate CLI tool that allows users to execute SQL Like queries against a Firestore database.
+FIKL is a Firestore Query Languate CLI tool and REPL that allows users to execute SQL Like queries against a Firestore database.
 
-* Supports **SELECT**, **UPDATE** & **DELETE** queries
+<img src="./img/fikl-screenshot.png" align="right" alt="FIKL Repl" width="450">
+
+* Supports `select`, `update`, `insert` & `delete` queries
+* Supports server side and [local](#local-filtering-and-sorting) filtering and sorting
+* Support for [`group by`](#group-by), [`count`](#count-documents) and [`distinct`](#distinct-queries)
+* Query results can be [output](#query-output) directly to a JSON file
 * Full featured **REPL**
 
-<p align="center">
-  <img src="./img/fikl-screenshot.png" alt="FIKL Repl" width="738">
-</p>
 
 ## How It Works
 The FIKL CLI tool allows for SQL-like queries to be executed against a Firestore database.
@@ -19,7 +21,6 @@ The FIKL CLI tool allows for SQL-like queries to be executed against a Firestore
      *  Collections contain a number of documents and are queried by making use of the `from` keyword.
    * **Collection Group**
      *  Collection Groups are essentially a grouping of collections that are named the same but exist within different Documents. Make use of the `within` keyword to query within a Collection Groups.
-1. Using Lark, the input text is parsed and the Python Firebase SDK is used to execute queries against the Firestore database.
 
 ## Build & Install
 1. Create a new virtual environment so that you can have an isolated python environment
@@ -64,71 +65,108 @@ fikl 'select * from MyCollection where year == 2005 limit 5'
 fikl 'select title, "author.firstName" from MyCollection where year == 2005 limit 5'
 ```
 
+## REPL Usage
+* Simply run the `fikl` command to enter the REPL.
+* Use the up arrow to recall previous statements
+* Statements can run over multiple lines and should be terminated with a semi-colon
+* Type exit to close the REPL
+
 ## Example Queries
+
 ### Document queries
-To fetch a single document, note that there is no need to a where clause when fetching a single document
+To fetch a single document, note that there is no need to supply a `where` clause when fetching a single document
 #### Fetch all fields of a single document
 Make use of the `at` keyword and the path to the document:
 ```sql
-select * at "SOME_COLLECTION/DOC_ID"
+select * at "some_collection/some_document_id"
 ```
 
 #### Fetch specified fields of a single document
-Instead of specifying * in the field list, use a comma separated list of desired fields:
+Instead of specifying __*__ in the field list, use a comma separated list of desired fields:
 ```sql
-select title, "author.firstName" at "SOME_COLLECTION/DOC_ID"
+select title, "author.firstName" at "some_collection/some_document_id"
 ```
 
 #### Update a document
-Similary to SQL, use the set keyword followed by the fields to be updated and the value to set those respective fields to:
+Similar to SQL, use the set keyword followed by the fields to be updated and the respective values:
 ```sql
-update at "SOME_COLLECTION/DOC_ID" set title = "Some Title", "author.firstName" = "Bob"
+update at "some_collection/some_document_id" set title = "Some Title", "author.firstName" = "Bob"
 ```
 
 #### Delete a document
 ```sql
-delete at "SOME_COLLECTION/DOC_ID"
+delete at "some_collection/some_document_id"
 ```
 
 ### Collection queries
-To fetch documents from a collection
+Collection queries and Collection Group queries share the same features. Collection queries make use of the `from` keyword while Collection Group queries use `within`.
 #### Fetch all fields of a single document
 Make use of the `from` keyword to indicate that a **collection** is being queried, or make use of `within` to indicate that a **collection group** is being queried:
 ```sql
-select * from SOME_COLLECTION
+select * from some_collection
 ```
 
 #### Use a where clause to filter what is returned.
-_Remember that Firestore requires explicit indexes when filtering by more than one property_:
 ```sql
-select * from SOME_COLLECTION where year == 2005 and "author.lastName" == "Diamond" limit 10
+select * from some_collection where year == 2005 and "author.lastName" == "Diamond" limit 10
+```
+
+#### Use within to query a collection group.
+```sql
+select * within some_collection_group limit 10
 ```
 
 #### Use an order by clause to sort what is returned.
-_Remember that Firestore requires explicit indexes when filtering or sorting by more than one property_:
 ```sql
-select * from SOME_COLLECTION where year == 2005 and "author.lastName" == "Diamond" order by year desc, title limit 10
+select * from some_collection where year == 2005 and "author.lastName" == "Diamond" order by year desc, title limit 10
 ```
 
-#### Update documents in a collection
+#### Local filtering and sorting
+Complex where clauses often require an explicit Firestore Index to be created. You can make use of local filtering and sorting by making use of `^`. Place the `^` after the name of the field and that field will be evaluated locally. This avoids the need of having to create an explicit index when querying data in an ad-hoc manner. Combinations of server side and locally evaluated fields can be included in a single statement.
+```sql
+select * from some_collection where year == 2005 and "author.lastName"^ == "Diamond" order by year^ desc, title limit 10
+```
+In the above example, the `year` field will be included in the where clauses as part of the Firestore query, however the `author.lastName` field will be filtered locally. Likewise, sorting on the `year` field will be performed locally due to the ^ being used in the order by statement.
+
+#### Group by
+The output of a query can be grouped by a single field
+```sql
+select * from some_collection where year == 2005 group by "author.lastName"
+```
+
+#### Distinct queries
+The distinct keyword can be used to return a unique list of documents based on the desired fields
+```sql
+select distinct "author.lastName", year from some_collection where year == 2005
+```
+
+#### Count documents
+The number of records that the query returns can be output as a single number
+```sql
+select count * from some_collection where year == 2005
+```
+
+#### Update documents in a collection (or collection group)
 A `where` clause is mandatory when updating documents in a collection or collection group:
 ```sql
-update from SOME_COLLECTION set title = "Some Title", "author.firstName" = "Bob" where year == 2005;
+update from some_collection set title = "Some Title", "author.firstName" = "Bob" where year == 2005;
 ```
 
 #### Delete documents in a collection (or collection group)
 A `where` clause is mandatory when deleting documents in a collection or collection group:
 
 ```sql
-delete from SOME_COLLECTION where year == 2005
+delete from some_collection where year == 2005
 ```
 
-#### Insert (add) a document into a collection (or collection group)
+#### Insert (add) a document into a collection
 The identifier of the document that is being inserted is optional. If the "identified by" is not supplied, Firestore will automatically
 set a document ID
 ```sql
-insert into SOME_COLLECTION set year = 2005, title = "Mutants", "author.firstName" = "Armand", "author.lastName" = "Marie Leroi" identified by "SOME_ID"
+insert into some_collection set year = 2005, title = "Mutants", "author.firstName" = "Armand", "author.lastName" = "Marie Leroi" identified by "some_document_id"
 ```
-
-## Powerfull when used with `jq`
-https://jqlang.github.io/jq/
+#### Query Output
+The results of a query can be output directly to a file at the specified location
+```sql
+select year, "author.firstName", "author.lastName" output "~/Desktop/books.json"
+```
