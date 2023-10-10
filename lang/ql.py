@@ -2,6 +2,7 @@
 # pylint: disable=too-many-return-statements
 # lang/ql.py
 import json
+import re
 from operator import itemgetter as i
 from functools import cmp_to_key
 import os
@@ -255,6 +256,13 @@ def add_where_clauses(query: fs.firestore.Query,
                          if where["local"] is False]
         for where in remote_wheres:
             corrected_operator = "not-in" if where["operator"] == "not_in" else where["operator"]
+
+            if corrected_operator == "like":
+                error_message = ("The 'like' operator is not supported by Firestore. "
+                                 "Use local evaluation by placing ^ after the property name. "
+                                 f"Did you mean {where['property']}^ ?")
+                raise QueryError(error_message)
+
             field_filter = FieldFilter(
                 where["property"], corrected_operator, where["value"])
             query = query.where(filter=field_filter)
@@ -372,6 +380,10 @@ def execute_show_query(fikl_query: FIKLSelectQuery) -> list[str]:
         colls.append(coll.id)
     return colls
 
+def like_to_regex(like: str)-> str:
+    """Converts a like clause to a regex clause."""
+    as_regex = like.replace("%", ".*?")
+    return f"^{as_regex}$"
 
 def local_compare(document: dict, prop: str, where: FIKLWhere) -> bool:
     """
@@ -402,6 +414,9 @@ def local_compare(document: dict, prop: str, where: FIKLWhere) -> bool:
             return where['value'] in value
         case "array_contains_any":
             return pydash.every(where['value'], lambda v: v in value)
+        case "like":
+            regex = like_to_regex(where['value'])
+            return re.search(regex, value) is not None
 
     return False
 
