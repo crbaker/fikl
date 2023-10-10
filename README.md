@@ -7,6 +7,7 @@ FIKL is a Firestore Query Languate CLI tool and REPL that allows users to execut
 * Supports `select`, `update`, `insert` & `delete` queries
 * Supports server side and [local](#local-filtering-and-sorting) filtering and sorting
 * Support for [`group by`](#group-by), [`count`](#count-documents) and [`distinct`](#distinct-queries)
+* Support for [`like`](#like-queries) operator when using `local` queries
 * Query results can be [output](#query-output) directly to a JSON file
 * Full featured **REPL**
 
@@ -127,6 +128,13 @@ Complex where clauses often require an explicit Firestore Index to be created. Y
 select * from some_collection where year == 2005 and "author.lastName"^ == "Diamond" order by year^ desc, title limit 10
 ```
 In the above example, the `year` field will be included in the where clauses as part of the Firestore query, however the `author.lastName` field will be filtered locally. Likewise, sorting on the `year` field will be performed locally due to the ^ being used in the order by statement.
+
+#### Like queries
+When using a locally evaluated property `like` is a valid operator.
+```sql
+select * from some_collection where year == 2005 and "author.lastName"^ like "%iamond" order by year desc, title limit 10
+```
+
 
 #### Group by
 The output of a query can be grouped by a single field
