@@ -1,5 +1,5 @@
 """This module provides the fikl query details."""
-# pylint: disable=too-many-return-statements,no-name-in-module
+# pylint: disable=too-many-return-statements
 # lang/ql.py
 import json
 import re
