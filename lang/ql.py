@@ -1,5 +1,5 @@
 """This module provides the fikl query details."""
-# pylint: disable=too-many-return-statements
+# pylint: disable=too-many-return-statements,no-name-in-module
 # lang/ql.py
 import json
 import re
@@ -10,6 +10,7 @@ import os
 from collections import defaultdict
 from collections.abc import MutableMapping
 
+import pyperclip
 import pydash
 
 from firebase_admin import firestore as fs
@@ -23,6 +24,7 @@ from lang.transformer import (FIKLQuery,
                               FIKLSelectQuery,
                               FIKLInsertQuery,
                               FIKLSubjectType,
+                              FIKLOutputType,
                               FIKLUpdateQuery, parse)
 
 
@@ -37,7 +39,7 @@ class QueryError(ValueError):
 
 def should_output(fikl_query: FIKLQuery) -> bool:
     "Indicates if the output of the query should be saved to a file"
-    return "output" in fikl_query and object_exists(fikl_query["output"])
+    return "output_type" in fikl_query and object_exists(fikl_query["output_type"])
 
 
 def run_query(query: str) -> list[dict] | dict:
@@ -59,9 +61,10 @@ def run_query(query: str) -> list[dict] | dict:
             doc) for doc in response if object_exists(doc)]
 
         if should_output(fikl_query):
-            saved_to_path = output_json_to_file(json.dumps(
-                documents, indent=2), fikl_query["output"])
-            return {"count": len(documents), "file": saved_to_path}
+            json_data = json.dumps(documents, indent=2)
+
+            saved_to_path = output_json(json_data, fikl_query)
+            return {"count": len(documents), "dest": saved_to_path}
 
         grouped_results = do_group_by(documents, fikl_query)
 
@@ -72,12 +75,29 @@ def run_query(query: str) -> list[dict] | dict:
     except Exception as exception:
         raise QueryError(exception) from exception
 
+def output_json(json_output: str, fikl_query: FIKLSelectQuery):
+    """ Writes the provided json to the provided path."""
+    if fikl_query["output_type"] == FIKLOutputType.PATH:
+        path = fikl_query["output"]
+        full_path = os.path.expanduser(path)
+        with open(full_path, "w", encoding="utf-8") as file:
+            file.write(json_output)
+
+        return full_path
+
+    if fikl_query["output_type"] == FIKLOutputType.CLIPBOARD:
+        pyperclip.copy(json_output)
+        return "clipboard"
+
+    return "Unknown output type"
+
 def do_group_by(records, fikl_query: FIKLSelectQuery):
     """Groups records by the provided group property."""
     if "group" in fikl_query and fikl_query["group"]:
         return pydash.group_by(records, fikl_query["group"])
 
     return records
+
 
 def function_for_query(fikl_query: FIKLSelectQuery):
     """Determines the appropriate function to use for the query results."""
@@ -90,15 +110,6 @@ def function_for_query(fikl_query: FIKLSelectQuery):
                 return pydash.uniq
 
     return lambda x: x
-
-
-def output_json_to_file(json_output: str, path: str):
-    """ Writes the provided json to the provided path."""
-    full_path = os.path.expanduser(path)
-    with open(full_path, "w", encoding="utf-8") as file:
-        file.write(json_output)
-
-    return full_path
 
 
 def merge_setters(dicts: list[dict]) -> dict:
@@ -380,10 +391,12 @@ def execute_show_query(fikl_query: FIKLSelectQuery) -> list[str]:
         colls.append(coll.id)
     return colls
 
-def like_to_regex(like: str)-> str:
+
+def like_to_regex(like: str) -> str:
     """Converts a like clause to a regex clause."""
     as_regex = like.replace("%", ".*?")
     return f"^{as_regex}$"
+
 
 def local_compare(document: dict, prop: str, where: FIKLWhere) -> bool:
     """

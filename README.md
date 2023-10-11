@@ -178,3 +178,7 @@ The results of a query can be output directly to a file at the specified locatio
 ```sql
 select year, "author.firstName", "author.lastName" output "~/Desktop/books.json"
 ```
+Or directly to the clipboard
+```sql
+select year, "author.firstName", "author.lastName" copy
+```

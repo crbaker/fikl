@@ -31,6 +31,11 @@ class FIKLSubjectType(Enum):
     DOCUMENT = 2
     COLLECTION = 3
 
+class FIKLOutputType(Enum):
+    """The different kinds of supported output destinations."""
+    PATH = 1
+    CLIPBOARD = 2
+
 
 class FIKLWhere(TypedDict):
     """The defniition of a where clause."""
@@ -76,6 +81,7 @@ class FIKLSelectQuery(FIKLQuery):
     """The definition of a select query."""
     fields: list[str] | str
     limit: int | None
+    output_type: FIKLOutputType | None
     output: str | None
     order: list[FIKLOrderBy] | None
     group: str | None
@@ -140,9 +146,17 @@ class FIKLTree(Transformer):
 
     def _as_output(self, output: Tree | None) -> list[FIKLWhere] | None:
         """Gets the output value that is specified in the query."""
+        if output is None or output.data != "output":
+            return None
+
+        return self._as_value(output)
+
+    def _as_output_type(self, output: Tree | None) -> FIKLOutputType | None:
+        """Gets the output type that is specified in the query."""
         if output is None:
             return None
-        return self._as_value(output)
+
+        return FIKLOutputType.PATH if output.data == "output" else FIKLOutputType.CLIPBOARD
 
     def _as_function(self, function: Tree | None) -> str | None:
         """Gets the function value that is specified in the query."""
@@ -245,6 +259,7 @@ class FIKLTree(Transformer):
             "order": self._as_order(order),
             "group": self._as_group(group),
             "output": self._as_output(output),
+            "output_type": self._as_output_type(output),
             "function": self._as_function(function)
         }
 
