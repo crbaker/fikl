@@ -6,7 +6,6 @@ import os
 import atexit
 import readline
 import json
-
 import firebase_admin
 
 import typer
@@ -18,6 +17,8 @@ from lang import ql
 app = typer.Typer(rich_markup_mode="rich")
 
 QUERY_COMMAND_HELP = "The query to execute against the Firestore database."
+PROGRESS_HOLDER = {"progress": None}
+
 
 @app.command(epilog="See https://github.com/crbaker/fikl for more details.")
 def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] = None):
@@ -26,7 +27,8 @@ def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] 
     """
     try:
         if (env_var := 'GOOGLE_APPLICATION_CREDENTIALS') not in os.environ:
-            rprint(f"""[italic yellow]Warning: {env_var} is not set[/italic yellow]""")
+            rprint(
+                f"""[italic yellow]Warning: {env_var} is not set[/italic yellow]""")
 
         configure_firebase()
 
@@ -37,9 +39,11 @@ def query(query_text: Annotated[(str), typer.Argument(help=QUERY_COMMAND_HELP)] 
     except ql.QueryError as exception:
         typer.echo(exception)
 
+
 def configure_firebase():
     """ Configures the Firebase SDK. """
     firebase_admin.initialize_app()
+
 
 def run_query_and_output(query_text):
     """
@@ -84,7 +88,7 @@ def start_repl():
         if current_query == "exit":
             go_again = False
             rprint("Bye!:waving_hand:")
-        if current_query == "cls":
+        elif current_query == "cls":
             typer.clear()
             current_query = None
         elif current_query.endswith(';'):

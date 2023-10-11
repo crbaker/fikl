@@ -13,6 +13,8 @@ from collections.abc import MutableMapping
 import pyperclip
 import pydash
 
+import typer
+
 from firebase_admin import firestore as fs
 
 from google.cloud.firestore_v1.base_query import FieldFilter
@@ -75,6 +77,7 @@ def run_query(query: str) -> list[dict] | dict:
     except Exception as exception:
         raise QueryError(exception) from exception
 
+
 def output_json(json_output: str, fikl_query: FIKLSelectQuery):
     """ Writes the provided json to the provided path."""
     if fikl_query["output_type"] == FIKLOutputType.PATH:
@@ -90,6 +93,7 @@ def output_json(json_output: str, fikl_query: FIKLSelectQuery):
         return "clipboard"
 
     return "Unknown output type"
+
 
 def do_group_by(records, fikl_query: FIKLSelectQuery):
     """Groups records by the provided group property."""
@@ -322,12 +326,15 @@ def execute_delete_query(fikl_query: FIKLUpdateQuery) -> int:
 
     count = 0
 
-    for doc in docs:
-        try:
-            doc.reference.delete()
-            count += 1
-        except Exception:
-            pass
+    if len(docs) > 0:
+        with typer.progressbar(label="Deleting", length=len(docs)) as progress:
+            for doc in docs:
+                try:
+                    doc.reference.delete()
+                    count += 1
+                    progress.update(1)
+                except Exception:
+                    pass
 
     return count
 
@@ -344,12 +351,15 @@ def execute_update_query(fikl_query: FIKLUpdateQuery) -> int:
     count = 0
     new_values = merge_setters(fikl_query["set"])
 
-    for doc in docs:
-        try:
-            doc.reference.update(new_values)
-            count += 1
-        except Exception:
-            pass
+    if len(docs) > 0:
+        with typer.progressbar(label="Updating", length=len(docs)) as progress:
+            for doc in docs:
+                try:
+                    doc.reference.update(new_values)
+                    count += 1
+                    progress.update(1)
+                except Exception:
+                    pass
 
     return count
 
