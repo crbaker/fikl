@@ -1,7 +1,7 @@
 start: instruction
 
-instruction: "select" [function] subset collection_type subject [where] [order] [limit] [group] [output | copy] -> select_collection
-    | "select" subset document_type subject [output | copy] -> select_document
+instruction: "select" [function] subset collection_type subject [where] [order] [limit] [group] [[output | copy] [file_type]] -> select_collection
+    | "select" subset document_type subject [[output | copy] [file_type]] -> select_document
 
     | "update" collection_type subject "set" set where  -> update_collection
     | "update" document_type subject "set" set -> update_document
@@ -18,6 +18,7 @@ comparrison: property[local] operator matching
 
 local: LOCAL
 
+file_type: JSON | CSV
 function: DISTINCT | COUNT | SUM | AVG | MIN | MAX
 
 order: "order" "by" sorter ("," sorter)*
@@ -46,6 +47,9 @@ SUM: "sum"
 AVG: "avg"
 MIN: "min"
 MAX: "max"
+
+CSV: "csv"
+JSON: "json"
 
 property: ESCAPED_STRING | CNAME
 subject: ESCAPED_STRING | CNAME

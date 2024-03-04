@@ -6,9 +6,11 @@ import re
 from operator import itemgetter as i
 from functools import cmp_to_key
 import os
-
 from collections import defaultdict
 from collections.abc import MutableMapping
+
+import pandas as pds
+
 
 import pyperclip
 import pydash
@@ -27,6 +29,7 @@ from lang.transformer import (FIKLQuery,
                               FIKLInsertQuery,
                               FIKLSubjectType,
                               FIKLOutputType,
+                              FIKLFileType,
                               FIKLUpdateQuery, parse)
 
 
@@ -63,33 +66,48 @@ def run_query(query: str) -> list[dict] | dict:
             doc) for doc in response if object_exists(doc)]
 
         if should_output(fikl_query):
-            json_data = json.dumps(documents, indent=2)
+            content = output_as(documents, fikl_query)
+            saved_to_path = output_json(content, fikl_query)
 
-            saved_to_path = output_json(json_data, fikl_query)
             return {"count": len(documents), "dest": saved_to_path}
 
         grouped_results = do_group_by(documents, fikl_query)
 
         function = function_for_query(fikl_query)
         return function(grouped_results)
+
     except QueryError:
         raise
     except Exception as exception:
         raise QueryError(exception) from exception
 
+def output_as(dictionary, fikl_query: FIKLSelectQuery):
+    """Converts the provided dictionary to the output format."""
+    if fikl_query["file_type"] == FIKLFileType.CSV:
+        return csv_dumps(dictionary)
 
-def output_json(json_output: str, fikl_query: FIKLSelectQuery):
+    return json.dumps(dictionary, indent=2)
+
+
+def csv_dumps(records: list):
+    """Converts the provided records to a csv string."""
+    flat_records = map(flatten, records)
+    data_frame = pds.DataFrame(flat_records)
+    return data_frame.to_csv(index=False)
+
+
+def output_json(output_data: str, fikl_query: FIKLSelectQuery):
     """ Writes the provided json to the provided path."""
     if fikl_query["output_type"] == FIKLOutputType.PATH:
         path = fikl_query["output"]
         full_path = os.path.expanduser(path)
         with open(full_path, "w", encoding="utf-8") as file:
-            file.write(json_output)
+            file.write(output_data)
 
         return full_path
 
     if fikl_query["output_type"] == FIKLOutputType.CLIPBOARD:
-        pyperclip.copy(json_output)
+        pyperclip.copy(output_data)
         return "clipboard"
 
     return "Unknown output type"

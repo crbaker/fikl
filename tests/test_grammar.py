@@ -3,7 +3,7 @@
 import unittest
 
 from lang.transformer import (parse, read_grammar, build_parse_tree,
-                              FIKLQueryType, FIKLSubjectType, QuerySyntaxError)
+                              FIKLQueryType, FIKLSubjectType, FIKLFileType, QuerySyntaxError)
 
 class TestTransformer(unittest.TestCase):
 
@@ -200,12 +200,13 @@ class TestTransformer(unittest.TestCase):
         self.assertIsNone(query["where"])
 
     def test_should_parse_valid_show_with_output(self):
-        query = parse('select * from COLLECTION where some_field == 2000 output "~/output.json"')
+        query = parse('select * from COLLECTION where some_field == 2000 output "~/output.json" json')
 
         self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
         self.assertEqual(query["subject_type"], FIKLSubjectType.COLLECTION)
         self.assertEqual(query["subject"], "COLLECTION")
         self.assertEqual(query["output"], "~/output.json")
+        self.assertEqual(query["file_type"], FIKLFileType.JSON)
 
     def test_should_parse_valid_insert(self):
         query = parse('insert into COLLECTION set some_field = 2000, some_other_field = "ABC", "some.nested.field" = "something" identified by "ABCD"')

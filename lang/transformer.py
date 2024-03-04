@@ -31,6 +31,11 @@ class FIKLSubjectType(Enum):
     DOCUMENT = 2
     COLLECTION = 3
 
+class FIKLFileType(Enum):
+    """The different kinds of supported output file types."""
+    JSON = 1
+    CSV = 2
+
 class FIKLOutputType(Enum):
     """The different kinds of supported output destinations."""
     PATH = 1
@@ -158,6 +163,14 @@ class FIKLTree(Transformer):
 
         return FIKLOutputType.PATH if output.data == "output" else FIKLOutputType.CLIPBOARD
 
+    def _as_file_type(self, file_type: Tree | None) -> FIKLFileType | None:
+        """Gets the file type that is specified in the query."""
+        if file_type is None:
+            return None
+
+        file_type = self._data_value(file_type, "file_type")
+        return FIKLFileType.CSV if file_type == "csv" else FIKLFileType.JSON
+
     def _as_function(self, function: Tree | None) -> str | None:
         """Gets the function value that is specified in the query."""
         if function is None:
@@ -244,7 +257,8 @@ class FIKLTree(Transformer):
 
     def _do_select(self, function: Tree | None, subset: Tree, subject_type: Tree,
                    subject: Tree, where: Tree | None, order: Tree | None,
-                   limit: Tree | None, group: Tree | None, output: Tree | None) -> FIKLSelectQuery:
+                   limit: Tree | None, group: Tree | None,
+                   output: Tree | None, file_type: Tree | None) -> FIKLSelectQuery:
         """
         The base method for all select queries.
         Creates the appropate definition of the select query.
@@ -260,21 +274,24 @@ class FIKLTree(Transformer):
             "group": self._as_group(group),
             "output": self._as_output(output),
             "output_type": self._as_output_type(output),
+            "file_type": self._as_file_type(file_type),
             "function": self._as_function(function)
         }
 
     def select_collection(self, function: Tree | None, subset: Tree, subject_type: Tree,
                           subject: Tree, where: Tree | None, order: Tree,
-                          limit: Tree | None, group: Tree | None, output: Tree | None):
+                          limit: Tree | None, group: Tree | None,
+                          output: Tree | None, file_type: Tree | None):
         """The method for all select collection queries."""
         return self._do_select(function, subset, subject_type, subject,
-                               where, order, limit, group, output)
+                               where, order, limit, group, output, file_type)
 
     def select_document(self, subset: Tree, subject_type: Tree,
-                        subject: Tree, output: Tree | None):
+                        subject: Tree, output: Tree | None, file_type: Tree | None):
         """The method for all select document queries."""
         return self._do_select(None, subset, subject_type, subject,
-                               where=None, order=None, limit=None, group=None, output=output)
+                               where=None, order=None, limit=None, group=None,
+                               output=output, file_type=file_type)
 
     def _do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
         """
