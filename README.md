@@ -182,3 +182,8 @@ Or directly to the clipboard
 ```sql
 select year, "author.firstName", "author.lastName" copy
 ```
+
+You can also specify the output format of either 'csv' of 'json' (defaults to json)
+```sql
+select year, "author.firstName", "author.lastName" copy csv
+```
