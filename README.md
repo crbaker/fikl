@@ -180,10 +180,10 @@ select year, "author.firstName", "author.lastName" output "~/Desktop/books.json"
 ```
 Or directly to the clipboard
 ```sql
-select year, "author.firstName", "author.lastName" copy
+select year, "author.firstName", "author.lastName" from some_collection copy
 ```
 
-You can also specify the output format of either 'csv' of 'json' (defaults to json)
+You can also specify the output format of either 'csv' or 'json' (defaults to json). _Unfortunately some nested objects and the results of group by clauses will results in errors or ugly CSV output_.
 ```sql
-select year, "author.firstName", "author.lastName" copy csv
+select year, "author.firstName", "author.lastName" from some_collection format csv
 ```

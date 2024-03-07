@@ -1,7 +1,7 @@
 start: instruction
 
-instruction: "select" [function] subset collection_type subject [where] [order] [limit] [group] [[output | copy] [file_type]] -> select_collection
-    | "select" subset document_type subject [[output | copy] [file_type]] -> select_document
+instruction: "select" [function] subset collection_type subject [where] [order] [limit] [group] [output_format] [output | copy] -> select_collection
+    | "select" subset document_type subject [output_format] [output | copy] -> select_document
 
     | "update" collection_type subject "set" set where  -> update_collection
     | "update" document_type subject "set" set -> update_document
@@ -18,7 +18,9 @@ comparrison: property[local] operator matching
 
 local: LOCAL
 
-file_type: JSON | CSV
+format: JSON | CSV
+output_format: "format" format
+
 function: DISTINCT | COUNT | SUM | AVG | MIN | MAX
 
 order: "order" "by" sorter ("," sorter)*

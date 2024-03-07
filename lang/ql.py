@@ -29,7 +29,7 @@ from lang.transformer import (FIKLQuery,
                               FIKLInsertQuery,
                               FIKLSubjectType,
                               FIKLOutputType,
-                              FIKLFileType,
+                              FIKLFormatType,
                               FIKLUpdateQuery, parse)
 
 
@@ -47,7 +47,7 @@ def should_output(fikl_query: FIKLQuery) -> bool:
     return "output_type" in fikl_query and object_exists(fikl_query["output_type"])
 
 
-def run_query(query: str) -> list[dict] | dict:
+def run_query(query: str) -> tuple[list[dict] | dict, FIKLFormatType]:
     """
     Parses the supplied query against the grammar and and executes the query.
 
@@ -60,34 +60,40 @@ def run_query(query: str) -> list[dict] | dict:
         response = execute_query(fikl_query)
 
         if isinstance(response, int):
-            return {"count": response}
+            return (output_as({"count": response}, FIKLFormatType.JSON), FIKLFormatType.JSON)
 
         documents = [snapshot_to_document_fn(fikl_query)(
             doc) for doc in response if object_exists(doc)]
 
-        if should_output(fikl_query):
-            content = output_as(documents, fikl_query)
-            saved_to_path = output_json(content, fikl_query)
-
-            return {"count": len(documents), "dest": saved_to_path}
-
-        grouped_results = do_group_by(documents, fikl_query)
+        output_format = format_as(fikl_query)
 
         function = function_for_query(fikl_query)
-        return function(grouped_results)
+
+        grouped_results = do_group_by(documents, fikl_query)
+        content = output_as(function(grouped_results), output_format)
+
+        if should_output(fikl_query):
+            saved_to_path = output_content(content, fikl_query)
+            result = {"count": len(documents), "dest": saved_to_path}
+            return (output_as(result, FIKLFormatType.JSON), output_format)
+
+        return (content, output_format)
 
     except QueryError:
         raise
     except Exception as exception:
         raise QueryError(exception) from exception
 
-def output_as(dictionary, fikl_query: FIKLSelectQuery):
+def format_as(fikl_query: FIKLSelectQuery) -> FIKLFormatType:
+    """Determines the appropriate format to use for the query results."""
+    return FIKLFormatType.CSV if fikl_query["format"] == FIKLFormatType.CSV else FIKLFormatType.JSON
+
+def output_as(dictionary, file_type: FIKLFormatType):
     """Converts the provided dictionary to the output format."""
-    if fikl_query["file_type"] == FIKLFileType.CSV:
+    if file_type == FIKLFormatType.CSV:
         return csv_dumps(dictionary)
 
     return json.dumps(dictionary, indent=2)
-
 
 def csv_dumps(records: list):
     """Converts the provided records to a csv string."""
@@ -96,7 +102,7 @@ def csv_dumps(records: list):
     return data_frame.to_csv(index=False)
 
 
-def output_json(output_data: str, fikl_query: FIKLSelectQuery):
+def output_content(output_data: str, fikl_query: FIKLSelectQuery):
     """ Writes the provided json to the provided path."""
     if fikl_query["output_type"] == FIKLOutputType.PATH:
         path = fikl_query["output"]

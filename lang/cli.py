@@ -5,7 +5,6 @@ import os.path
 import os
 import atexit
 import readline
-import json
 import firebase_admin
 
 import typer
@@ -13,6 +12,8 @@ from typing_extensions import Annotated
 from rich import print as rprint, print_json
 
 from lang import ql
+
+from lang.transformer import (FIKLFormatType)
 
 app = typer.Typer(rich_markup_mode="rich")
 
@@ -50,8 +51,9 @@ def run_query_and_output(query_text):
     Runs the supplied query and outputs the results.
     """
     results = ql.run_query(query_text)
-    print_json(json.dumps(results, indent=2))
 
+    output_fn = rprint if results[1] == FIKLFormatType.CSV else print_json
+    output_fn(results[0])
 
 def start_repl():
     """
