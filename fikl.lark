@@ -52,10 +52,12 @@ MAX: "max"
 
 CSV: "csv"
 JSON: "json"
+TRUE: "true"
+FALSE: "false"
 
 property: ESCAPED_STRING | CNAME
 subject: ESCAPED_STRING | CNAME
-literal: ESCAPED_STRING | NUMBER | SIGNED_NUMBER | NULL
+literal: ESCAPED_STRING | NUMBER | SIGNED_NUMBER | NULL | TRUE | FALSE
 
 array: "[" literal ("," literal)* "]"
 

@@ -304,6 +304,7 @@ def add_where_clauses(query: fs.firestore.Query,
 
             field_filter = FieldFilter(
                 where["property"], corrected_operator, where["value"])
+
             query = query.where(filter=field_filter)
         return query
 

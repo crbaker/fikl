@@ -135,6 +135,12 @@ class FIKLTree(Transformer):
             if (value := self._data_value(matching, 'literal')) == 'null':
                 return None
 
+            if (value := self._data_value(matching, 'literal')) == 'true':
+                return True
+
+            if (value := self._data_value(matching, 'literal')) == 'false':
+                return False
+
             return ast.literal_eval(value)
 
         if matching.data == "array":
