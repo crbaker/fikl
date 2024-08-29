@@ -199,7 +199,7 @@ def merge_dicts(dicts) -> dict:
     return dict(result)
 
 
-def extract_fields(obj: dict, fields: list[str]) -> dict:
+def extract_fields(obj: dict | None, fields: list[str]) -> dict:
     """
     Returns only fields from the provided object that are in the provided list of fields.
 
@@ -207,6 +207,9 @@ def extract_fields(obj: dict, fields: list[str]) -> dict:
         dict: The dict with only the requested fields.
     """
     reduced = {}
+
+    if obj is None:
+        return reduced
 
     for field in fields:
         if "." not in field:
@@ -216,7 +219,7 @@ def extract_fields(obj: dict, fields: list[str]) -> dict:
                 reduced[field] = obj[field]
         else:
             sub_fields = field.split(".")
-            if sub_fields[0] not in obj:
+            if sub_fields[0] not in obj or sub_fields[0] is None:
                 reduced[field] = None
             else:
                 sub_obj = obj[sub_fields[0]]
