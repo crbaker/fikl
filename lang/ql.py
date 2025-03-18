@@ -545,10 +545,33 @@ def execute_select_query(fikl_query: FIKLSelectQuery) -> list[fs.firestore.Docum
         query = add_where_clauses(query, fikl_query)
         query = add_order_by_clauses(query, fikl_query)
 
+        results: list[fs.firestore.DocumentSnapshot] = []
+
         if "limit" in fikl_query and fikl_query["limit"] is not None:
             query = query.limit(fikl_query["limit"])
+            results.append(query.get())
+        elif "order" in fikl_query and fikl_query["order"] is not None:
+             # can only paginate when there is an order by clause
+            default_limit = 1000
 
-        return sort_locally(filter_locally(query.get(), fikl_query), fikl_query)
+            batch_query = query.limit(default_limit)
+            last = None
+
+            while True:
+                batch: list[fs.firestore.DocumentSnapshot] = []
+
+                if last is None:
+                    batch.extend(batch_query.get())
+                else:
+                    batch.extend(batch_query.start_after(last).get())
+
+                results.extend(batch)
+                if len(batch) == 0:
+                    break
+
+                last = batch[-1]
+
+        return sort_locally(filter_locally(results, fikl_query), fikl_query)
 
     match fikl_query["subject_type"]:
         case FIKLSubjectType.COLLECTION_GROUP:
