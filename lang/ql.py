@@ -549,7 +549,7 @@ def execute_select_query(fikl_query: FIKLSelectQuery) -> list[fs.firestore.Docum
 
         if "limit" in fikl_query and fikl_query["limit"] is not None:
             query = query.limit(fikl_query["limit"])
-            results.append(query.get())
+            results.extend(query.get())
         elif "order" in fikl_query and fikl_query["order"] is not None:
              # can only paginate when there is an order by clause
             default_limit = 1000
