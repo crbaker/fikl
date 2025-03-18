@@ -31,6 +31,10 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(query["order"][2]["property"], "first_name")
         self.assertEqual(query["order"][2]["direction"], "asc")
 
+    def test_should_parse_valid_select_with_page(self):
+        query = parse('select * from SOME_COLLECTION order by SOME_PROPERTY page 10')
+        self.assertEqual(query["page"], 10)
+
     def test_should_parse_valid_select_query(self):
         query = parse('select * from SOME_COLLECTION')
         self.assertEqual(query["query_type"], FIKLQueryType.SELECT)
@@ -75,6 +79,8 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(query["where"][1]["property"], "some_other_field")
         self.assertEqual(query["where"][1]["operator"], "==")
         self.assertEqual(query["where"][1]["value"], 2000)
+
+        self.assertEqual(query["limit"], 10)
 
     def test_should_parse_valid_select_and_array_based_where_query(self):
         query = parse("""

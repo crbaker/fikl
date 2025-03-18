@@ -1,6 +1,7 @@
 start: instruction
 
 instruction: "select" [function] subset collection_type subject [where] [order] [limit] [group] [output_format] [output | copy] -> select_collection
+    | "select" [function] subset collection_type subject [where] order page [group] [output_format] [output | copy] -> select_paged_collection
     | "select" subset document_type subject [output_format] [output | copy] -> select_document
 
     | "update" collection_type subject "set" set where  -> update_collection
@@ -27,6 +28,8 @@ order: "order" "by" sorter ("," sorter)*
 sorter: property[local] [direction]
 
 group: "group" "by" property
+
+page: "page" SIGNED_NUMBER
 
 matching: (literal | array)
 

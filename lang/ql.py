@@ -550,11 +550,8 @@ def execute_select_query(fikl_query: FIKLSelectQuery) -> list[fs.firestore.Docum
         if "limit" in fikl_query and fikl_query["limit"] is not None:
             query = query.limit(fikl_query["limit"])
             results.extend(query.get())
-        elif "order" in fikl_query and fikl_query["order"] is not None:
-             # can only paginate when there is an order by clause
-            default_limit = 1000
-
-            batch_query = query.limit(default_limit)
+        elif "page" in fikl_query and fikl_query["page"] is not None:
+            batch_query = query.limit(fikl_query["page"])
             last = None
 
             while True:
@@ -570,6 +567,8 @@ def execute_select_query(fikl_query: FIKLSelectQuery) -> list[fs.firestore.Docum
                     break
 
                 last = batch[-1]
+        else:
+            results.extend(query.get())
 
         return sort_locally(filter_locally(results, fikl_query), fikl_query)
 

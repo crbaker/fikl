@@ -233,6 +233,12 @@ class FIKLTree(Transformer):
 
         return self._data_value(group, "property")
 
+    def _as_page(self, page: Tree | None) -> str:
+        """Gets the group by fields that are specified in the query."""
+        if page is None:
+            return None
+        return self._as_value(page)
+
     def _as_order(self, order: Tree | None) -> list[FIKLOrderBy] | None:
         """Gets the order by instructions for the select query"""
         if order is None:
@@ -263,7 +269,7 @@ class FIKLTree(Transformer):
 
     def _do_select(self, function: Tree | None, subset: Tree, subject_type: Tree,
                    subject: Tree, where: Tree | None, order: Tree | None,
-                   limit: Tree | None, group: Tree | None,
+                   limit: Tree | None, page: Tree | None, group: Tree | None,
                    output: Tree | None, output_format: Tree | None) -> FIKLSelectQuery:
         """
         The base method for all select queries.
@@ -276,6 +282,7 @@ class FIKLTree(Transformer):
             "subject_type": self._as_subject_type(subject_type),
             "where": self._as_where(where),
             "limit": self._as_limit(limit),
+            "page": self._as_page(page),
             "order": self._as_order(order),
             "group": self._as_group(group),
             "output": self._as_output(output),
@@ -284,20 +291,27 @@ class FIKLTree(Transformer):
             "function": self._as_function(function)
         }
 
+    def select_paged_collection(self,function: Tree | None, subset: Tree, subject_type: Tree,
+                          subject: Tree, where: Tree | None, order: Tree, page: Tree,
+                          group: Tree | None,output_format: Tree | None, output: Tree | None):
+        """The method for all select collection queries."""
+        return self._do_select(function, subset, subject_type, subject,
+                               where, order, None, page, group, output, output_format)
+
     def select_collection(self, function: Tree | None, subset: Tree, subject_type: Tree,
-                          subject: Tree, where: Tree | None, order: Tree,
+                          subject: Tree, where: Tree | None, order: Tree | None,
                           limit: Tree | None, group: Tree | None,
                           output_format: Tree | None, output: Tree | None):
         """The method for all select collection queries."""
         return self._do_select(function, subset, subject_type, subject,
-                               where, order, limit, group, output, output_format)
+                               where, order, limit, None, group, output, output_format)
 
     def select_document(self, subset: Tree, subject_type: Tree,
                         subject: Tree, output_format: Tree | None,
                         output: Tree | None):
         """The method for all select document queries."""
         return self._do_select(None, subset, subject_type, subject,
-                               where=None, order=None, limit=None, group=None,
+                               where=None, order=None, limit=None, page=None, group=None,
                                output=output, output_format=output_format)
 
     def _do_update(self, subject_type: Tree, subject: Tree, setter: Tree, where: Tree | None):
