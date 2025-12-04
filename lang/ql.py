@@ -19,6 +19,7 @@ import typer
 
 from firebase_admin import firestore as fs
 
+from google.api_core.retry import Retry
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from lang.transformer import (FIKLQuery,
@@ -558,9 +559,9 @@ def execute_select_query(fikl_query: FIKLSelectQuery) -> list[fs.firestore.Docum
                 batch: list[fs.firestore.DocumentSnapshot] = []
 
                 if last is None:
-                    batch.extend(batch_query.get())
+                    batch.extend(batch_query.get(retry=Retry()))
                 else:
-                    batch.extend(batch_query.start_after(last).get())
+                    batch.extend(batch_query.start_after(last).get(retry=Retry()))
 
                 results.extend(batch)
                 if len(batch) == 0:
